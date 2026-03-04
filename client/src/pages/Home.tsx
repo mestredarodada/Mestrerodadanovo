@@ -74,42 +74,67 @@ function QuickStats({ onTabChange }: { onTabChange: (tab: string) => void }) {
     },
     {
       icon: Star,
-      label: 'Times na Série A',
-      value: standings ? `${standings.length}` : '20',
-      sub: 'Temporada 2026',
+      label: 'Palpites do Mestre',
+      value: 'Em Breve',
+      sub: 'Análise com IA',
       color: 'from-purple-500 to-purple-600',
       iconBg: 'bg-purple-100 dark:bg-purple-900/40',
       iconColor: 'text-purple-600 dark:text-purple-400',
       tab: 'standings',
+      isMascote: true,
     },
   ];
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
-      {stats.map((stat, i) => (
-        <motion.div
-          key={stat.label}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 + i * 0.08, duration: 0.4 }}
-          onClick={() => onTabChange(stat.tab)}
-          className="bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 cursor-pointer group"
-        >
-          <div className="flex items-start justify-between mb-3">
-            <div className={`w-9 h-9 rounded-xl ${stat.iconBg} flex items-center justify-center`}>
-              <stat.icon size={18} className={stat.iconColor} />
-            </div>
-            <ChevronRight size={14} className="text-muted-foreground mt-1" />
-          </div>
-          <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
-          <p className="font-poppins font-bold text-foreground text-sm leading-tight truncate">
-            {stat.value}
-          </p>
-          {stat.sub && (
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">{stat.sub}</p>
-          )}
-        </motion.div>
-      ))}
+      {stats.map((stat, i) => {
+        const isMascote = (stat as any).isMascote;
+        return (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 + i * 0.08, duration: 0.4 }}
+            onClick={() => onTabChange(stat.tab)}
+            className={`rounded-2xl border border-border shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 cursor-pointer group overflow-hidden ${
+              isMascote
+                ? 'bg-gradient-to-br from-purple-600 to-purple-700 p-4 flex flex-col items-center justify-center'
+                : 'bg-card p-4'
+            }`}
+          >
+            {isMascote ? (
+              <>
+                <img
+                  src="/mascote.png"
+                  alt="Mestre da Rodada"
+                  className="w-24 h-24 object-contain mb-2 drop-shadow-lg group-hover:scale-110 transition-transform duration-300"
+                />
+                <p className="text-xs text-purple-200 text-center mb-1 font-semibold">{stat.label}</p>
+                <p className="font-poppins font-bold text-white text-center text-sm leading-tight">{stat.value}</p>
+                {stat.sub && (
+                  <p className="text-xs text-purple-100 mt-0.5 text-center">{stat.sub}</p>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`w-9 h-9 rounded-xl ${stat.iconBg} flex items-center justify-center`}>
+                    <stat.icon size={18} className={stat.iconColor} />
+                  </div>
+                  <ChevronRight size={14} className="text-muted-foreground mt-1" />
+                </div>
+                <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
+                <p className="font-poppins font-bold text-foreground text-sm leading-tight truncate">
+                  {stat.value}
+                </p>
+                {stat.sub && (
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{stat.sub}</p>
+                )}
+              </>
+            )}
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
