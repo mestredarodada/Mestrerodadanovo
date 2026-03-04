@@ -163,11 +163,13 @@ export const adminRouter = router({
       }
 
       try {
+        console.log('--- INICIANDO GERAÇÃO DE PALPITES VIA ADMIN ---');
         // Importar o serviço de palpites
         const { generateAllPredictions } = await import('../services/predictions.service');
         
         // Gerar os palpites
         const result = await generateAllPredictions();
+        console.log('--- GERAÇÃO CONCLUÍDA COM SUCESSO ---');
         
         return {
           success: true,
@@ -175,7 +177,12 @@ export const adminRouter = router({
           created: result,
         };
       } catch (error) {
-        console.error('Erro ao gerar palpites:', error);
+        console.error('--- ERRO NA GERAÇÃO DE PALPITES ---');
+        console.error('Erro detalhado:', error);
+        if (error instanceof Error) {
+          console.error('Mensagem:', error.message);
+          console.error('Stack:', error.stack);
+        }
         throw new Error('Falha ao gerar palpites: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
       }
     }),
