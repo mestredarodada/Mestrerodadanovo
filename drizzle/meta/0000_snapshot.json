@@ -1,110 +1,366 @@
 {
-  "version": "5",
-  "dialect": "mysql",
-  "id": "c4007a69-c26b-4fe2-b303-02470ec31e99",
+  "id": "d08cb1a3-8935-453b-9c49-f460bcfcea3a",
   "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "users": {
-      "name": "users",
+    "public.predictions": {
+      "name": "predictions",
+      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": true
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
         },
-        "openId": {
-          "name": "openId",
-          "type": "varchar(64)",
+        "match_id": {
+          "name": "match_id",
+          "type": "varchar(100)",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
+          "notNull": true
         },
-        "name": {
-          "name": "name",
+        "home_team_id": {
+          "name": "home_team_id",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "home_team_name": {
+          "name": "home_team_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "home_team_crest": {
+          "name": "home_team_crest",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         },
-        "email": {
-          "name": "email",
-          "type": "varchar(320)",
+        "away_team_id": {
+          "name": "away_team_id",
+          "type": "varchar(100)",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true
         },
-        "loginMethod": {
-          "name": "loginMethod",
-          "type": "varchar(64)",
+        "away_team_name": {
+          "name": "away_team_name",
+          "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true
         },
-        "role": {
-          "name": "role",
-          "type": "enum('user','admin')",
+        "away_team_crest": {
+          "name": "away_team_crest",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'user'"
+          "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "match_date": {
+          "name": "match_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "matchday": {
+          "name": "matchday",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "venue": {
+          "name": "venue",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_position": {
+          "name": "home_team_position",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_points": {
+          "name": "home_team_points",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_played_games": {
+          "name": "home_team_played_games",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_won": {
+          "name": "home_team_won",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_draw": {
+          "name": "home_team_draw",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_lost": {
+          "name": "home_team_lost",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_goals_for": {
+          "name": "home_team_goals_for",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_goals_against": {
+          "name": "home_team_goals_against",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_goal_difference": {
+          "name": "home_team_goal_difference",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_avg_corners": {
+          "name": "home_team_avg_corners",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_avg_cards": {
+          "name": "home_team_avg_cards",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_avg_shots_on_target": {
+          "name": "home_team_avg_shots_on_target",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "home_team_avg_possession": {
+          "name": "home_team_avg_possession",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_position": {
+          "name": "away_team_position",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_points": {
+          "name": "away_team_points",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_played_games": {
+          "name": "away_team_played_games",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_won": {
+          "name": "away_team_won",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_draw": {
+          "name": "away_team_draw",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_lost": {
+          "name": "away_team_lost",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_goals_for": {
+          "name": "away_team_goals_for",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_goals_against": {
+          "name": "away_team_goals_against",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_goal_difference": {
+          "name": "away_team_goal_difference",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_avg_corners": {
+          "name": "away_team_avg_corners",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_avg_cards": {
+          "name": "away_team_avg_cards",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_avg_shots_on_target": {
+          "name": "away_team_avg_shots_on_target",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_team_avg_possession": {
+          "name": "away_team_avg_possession",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "main_prediction": {
+          "name": "main_prediction",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "main_confidence": {
+          "name": "main_confidence",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "goals_prediction": {
+          "name": "goals_prediction",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "goals_confidence": {
+          "name": "goals_confidence",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extra_tip": {
+          "name": "extra_tip",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extra_confidence": {
+          "name": "extra_confidence",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "corners_prediction": {
+          "name": "corners_prediction",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "corners_confidence": {
+          "name": "corners_confidence",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cards_prediction": {
+          "name": "cards_prediction",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cards_confidence": {
+          "name": "cards_confidence",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shots_on_target_prediction": {
+          "name": "shots_on_target_prediction",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shots_on_target_confidence": {
+          "name": "shots_on_target_confidence",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "both_teams_to_score": {
+          "name": "both_teams_to_score",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "both_teams_to_score_confidence": {
+          "name": "both_teams_to_score_confidence",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "justification": {
+          "name": "justification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "generated_at": {
+          "name": "generated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "(now())"
+          "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "onUpdate": true,
-          "default": "(now())"
-        },
-        "lastSignedIn": {
-          "name": "lastSignedIn",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(now())"
+          "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "users_id": {
-          "name": "users_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "users_openId_unique": {
-          "name": "users_openId_unique",
+        "predictions_match_id_unique": {
+          "name": "predictions_match_id_unique",
+          "nullsNotDistinct": false,
           "columns": [
-            "openId"
+            "match_id"
           ]
         }
       },
-      "checkConstraint": {}
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
   "views": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
-  },
-  "internal": {
-    "tables": {},
-    "indexes": {}
+    "tables": {}
   }
 }

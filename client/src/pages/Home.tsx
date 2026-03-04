@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Standings from '@/components/Standings';
 import UpcomingMatches from '@/components/UpcomingMatches';
 import RecentResults from '@/components/RecentResults';
+import Predictions from '@/components/Predictions';
 import {
   Trophy,
   Calendar,
@@ -14,6 +15,7 @@ import {
   Github,
   ExternalLink,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 import { useStandings, useMatches } from '@/hooks/useFootballData';
 
@@ -142,6 +144,7 @@ function QuickStats({ onTabChange }: { onTabChange: (tab: string) => void }) {
 const tabItems = [
   { value: 'standings', icon: BarChart3, label: 'Classificação', short: 'Classif.' },
   { value: 'upcoming', icon: Calendar, label: 'Próximos Jogos', short: 'Próximos' },
+  { value: 'predictions', icon: Sparkles, label: 'Palpites do Mestre', short: 'Palpites' },
   { value: 'results', icon: Trophy, label: 'Resultados', short: 'Result.' },
 ];
 
@@ -299,6 +302,18 @@ export default function Home() {
                     transition={{ duration: 0.25 }}
                   >
                     <UpcomingMatches />
+                  </motion.div>
+                </TabsContent>
+
+                <TabsContent value="predictions" className="mt-0">
+                  <motion.div
+                    key="predictions"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <Predictions />
                   </motion.div>
                 </TabsContent>
 
