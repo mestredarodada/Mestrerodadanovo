@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuth } from "@/_core/hooks/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Standings from '@/components/Standings';
 import UpcomingMatches from '@/components/UpcomingMatches';
@@ -15,7 +14,6 @@ import { Trophy, Calendar, BarChart3 } from 'lucide-react';
  */
 
 export default function Home() {
-  const { user, loading, error, isAuthenticated, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('standings');
 
   return (
