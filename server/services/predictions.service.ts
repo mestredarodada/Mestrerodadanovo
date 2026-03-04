@@ -171,23 +171,25 @@ export async function savePredictionToDatabase(
 ) {
   const database = getDb();
   
+  console.log(`💾 Verificando existência de palpite para jogo ID: ${match.id}`);
+  
   // Verificar se já existe uma previsão para este jogo
   const existing = await database
     .select()
     .from(predictions)
-    .where(eq(predictions.matchId, match.id))
+    .where(eq(predictions.matchId, String(match.id)))
     .limit(1);
 
   const predictionData = {
-    matchId: match.id,
-    homeTeamId: match.homeTeam.id,
+    matchId: String(match.id),
+    homeTeamId: String(match.homeTeam.id),
     homeTeamName: match.homeTeam.name,
     homeTeamCrest: match.homeTeam.crest,
-    awayTeamId: match.awayTeam.id,
+    awayTeamId: String(match.awayTeam.id),
     awayTeamName: match.awayTeam.name,
     awayTeamCrest: match.awayTeam.crest,
     matchDate: new Date(match.utcDate),
-    matchday: match.matchday,
+    matchday: String(match.matchday),
     venue: match.venue,
     homeTeamPosition: homeTeam.position,
     homeTeamPoints: homeTeam.points,
@@ -207,19 +209,19 @@ export async function savePredictionToDatabase(
     awayTeamGoalsFor: awayTeam.goalsFor,
     awayTeamGoalsAgainst: awayTeam.goalsAgainst,
     awayTeamGoalDifference: awayTeam.goalDifference,
-    mainPrediction: geminiPrediction.mainPrediction,
-    mainConfidence: geminiPrediction.mainConfidence,
-    goalsPrediction: geminiPrediction.goalsPrediction,
-    goalsConfidence: geminiPrediction.goalsConfidence,
-    extraTip: geminiPrediction.extraTip,
-    extraConfidence: geminiPrediction.extraConfidence,
-    cornersPrediction: geminiPrediction.cornersPrediction,
-    cornersConfidence: geminiPrediction.cornersConfidence,
-    cardsPrediction: geminiPrediction.cardsPrediction,
-    cardsConfidence: geminiPrediction.cardsConfidence,
-    bothTeamsToScore: geminiPrediction.bothTeamsToScore,
-    bothTeamsToScoreConfidence: geminiPrediction.bothTeamsToScoreConfidence,
-    justification: geminiPrediction.justification,
+    mainPrediction: geminiPrediction.mainPrediction || 'DRAW',
+    mainConfidence: geminiPrediction.mainConfidence || 'MEDIUM',
+    goalsPrediction: geminiPrediction.goalsPrediction || 'UNDER_2_5',
+    goalsConfidence: geminiPrediction.goalsConfidence || 'MEDIUM',
+    extraTip: geminiPrediction.extraTip || 'Análise em processamento',
+    extraConfidence: geminiPrediction.extraConfidence || 'MEDIUM',
+    cornersPrediction: geminiPrediction.cornersPrediction || null,
+    cornersConfidence: geminiPrediction.cornersConfidence || null,
+    cardsPrediction: geminiPrediction.cardsPrediction || null,
+    cardsConfidence: geminiPrediction.cardsConfidence || null,
+    bothTeamsToScore: geminiPrediction.bothTeamsToScore || null,
+    bothTeamsToScoreConfidence: geminiPrediction.bothTeamsToScoreConfidence || null,
+    justification: geminiPrediction.justification || 'Justificativa não gerada.',
   };
 
   if (existing.length > 0) {
@@ -227,7 +229,7 @@ export async function savePredictionToDatabase(
     await database
       .update(predictions)
       .set(predictionData)
-      .where(eq(predictions.matchId, match.id));
+      .where(eq(predictions.matchId, String(match.id)));
   } else {
     // Inserir nova previsão
     await database.insert(predictions).values(predictionData);
