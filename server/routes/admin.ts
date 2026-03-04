@@ -7,7 +7,7 @@ import { sendPredictionToTelegram } from '../services/telegram.service';
 
 // Middleware para verificar senha do admin
 function verifyAdminPassword(password: string): boolean {
-  const adminPassword = process.env.ADMIN_PASSWORD || 'mestre2026';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'mestrefelipe2026';
   return password === adminPassword;
 }
 
@@ -164,15 +164,15 @@ export const adminRouter = router({
 
       try {
         // Importar o serviço de palpites
-        const { generatePredictionsForUpcomingMatches } = await import('../services/predictions.service');
+        const { generateAllPredictions } = await import('../services/predictions.service');
         
         // Gerar os palpites
-        const result = await generatePredictionsForUpcomingMatches();
+        const result = await generateAllPredictions();
         
         return {
           success: true,
-          message: `${result.created} novos palpites gerados com sucesso!`,
-          created: result.created,
+          message: 'Palpites gerados com sucesso!',
+          created: result,
         };
       } catch (error) {
         console.error('Erro ao gerar palpites:', error);
