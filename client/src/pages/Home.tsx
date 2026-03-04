@@ -26,7 +26,7 @@ import { useStandings, useMatches } from '@/hooks/useFootballData';
  */
 
 // Componente de estatísticas rápidas
-function QuickStats() {
+function QuickStats({ onTabChange }: { onTabChange: (tab: string) => void }) {
   const { data: standings } = useStandings();
   const { data: upcoming } = useMatches('SCHEDULED');
   const { data: finished } = useMatches('FINISHED');
@@ -44,6 +44,7 @@ function QuickStats() {
       color: 'from-blue-600 to-blue-700',
       iconBg: 'bg-blue-100 dark:bg-blue-900/40',
       iconColor: 'text-blue-600 dark:text-blue-400',
+      tab: 'standings',
     },
     {
       icon: Calendar,
@@ -55,6 +56,7 @@ function QuickStats() {
       color: 'from-orange-500 to-orange-600',
       iconBg: 'bg-orange-100 dark:bg-orange-900/40',
       iconColor: 'text-orange-600 dark:text-orange-400',
+      tab: 'upcoming',
     },
     {
       icon: Activity,
@@ -68,6 +70,7 @@ function QuickStats() {
       color: 'from-emerald-500 to-emerald-600',
       iconBg: 'bg-emerald-100 dark:bg-emerald-900/40',
       iconColor: 'text-emerald-600 dark:text-emerald-400',
+      tab: 'results',
     },
     {
       icon: Star,
@@ -77,6 +80,7 @@ function QuickStats() {
       color: 'from-purple-500 to-purple-600',
       iconBg: 'bg-purple-100 dark:bg-purple-900/40',
       iconColor: 'text-purple-600 dark:text-purple-400',
+      tab: 'standings',
     },
   ];
 
@@ -88,7 +92,8 @@ function QuickStats() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 + i * 0.08, duration: 0.4 }}
-          className="bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md transition-shadow duration-300"
+          onClick={() => onTabChange(stat.tab)}
+          className="bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 cursor-pointer group"
         >
           <div className="flex items-start justify-between mb-3">
             <div className={`w-9 h-9 rounded-xl ${stat.iconBg} flex items-center justify-center`}>
@@ -220,7 +225,7 @@ export default function Home() {
         </motion.div>
 
         {/* Estatísticas Rápidas */}
-        <QuickStats />
+        <QuickStats onTabChange={setActiveTab} />
 
         {/* Abas de conteúdo */}
         <motion.div
