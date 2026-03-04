@@ -73,7 +73,7 @@ function QuickStats() {
       icon: Star,
       label: 'Times na Série A',
       value: standings ? `${standings.length}` : '20',
-      sub: 'Temporada 2025',
+      sub: 'Temporada 2026',
       color: 'from-purple-500 to-purple-600',
       iconBg: 'bg-purple-100 dark:bg-purple-900/40',
       iconColor: 'text-purple-600 dark:text-purple-400',
@@ -147,7 +147,7 @@ export default function Home() {
                 </h1>
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                   <Zap size={10} className="text-[#FF8C00]" />
-                  Brasileirão Série A 2025
+                  Brasileirão Série A 2026
                 </p>
               </div>
             </motion.div>
@@ -195,7 +195,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                Temporada 2025
+                Temporada 2026
               </motion.p>
               <motion.h2
                 className="font-poppins font-black text-white text-2xl md:text-4xl leading-tight mb-3"
@@ -305,7 +305,7 @@ export default function Home() {
               />
               <div>
                 <p className="font-poppins font-black text-lg leading-none">Mestre da Rodada</p>
-                <p className="text-blue-200 text-xs mt-0.5">Brasileirão Série A 2025</p>
+                <p className="text-blue-200 text-xs mt-0.5">Brasileirão Série A 2026</p>
               </div>
             </div>
 
@@ -342,7 +342,7 @@ export default function Home() {
           </div>
 
           <div className="mt-6 pt-4 border-t border-white/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-blue-200">
-            <p>© 2025 Mestre da Rodada — Análise e Palpites do Brasileirão</p>
+            <p>© 2026 Mestre da Rodada — Análise e Palpites do Brasileirão</p>
             <p>Dados fornecidos por football-data.org</p>
           </div>
         </motion.footer>
