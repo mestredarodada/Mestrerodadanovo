@@ -40,8 +40,9 @@ export async function fetchBrazileiraoData() {
       }
     );
 
-    let matchesResponse = await axios.get(
-      'https://api.football-data.org/v4/competitions/BSA/matches?status=SCHEDULED',
+    // Buscar jogos exatamente como o site faz
+    const matchesResponse = await axios.get(
+      'https://api.football-data.org/v4/competitions/BSA/matches',
       {
         headers: {
           'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY,
@@ -49,32 +50,18 @@ export async function fetchBrazileiraoData() {
       }
     );
 
-    let matches: MatchData[] = matchesResponse.data.matches || [];
+    const allMatches = matchesResponse.data.matches || [];
+    
+    // Filtrar jogos que estão SCHEDULED ou TIMED (exatamente o que o site mostra como próximos)
+    let matches = allMatches.filter((m: any) => m.status === 'SCHEDULED' || m.status === 'TIMED');
 
-    // Se não houver jogos agendados, buscar todos os jogos e filtrar os próximos
+    // Se não houver jogos futuros (ex: fim de temporada), pegar os últimos 10 para ter o que analisar
     if (matches.length === 0) {
-      console.log('⚠️ Nenhum jogo SCHEDULED encontrado. Buscando todos os jogos...');
-      matchesResponse = await axios.get(
-        'https://api.football-data.org/v4/competitions/BSA/matches',
-        {
-          headers: {
-            'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY,
-          },
-        }
-      );
-
-      const allMatches = matchesResponse.data.matches || [];
-      
-      // Filtrar jogos que ainda não aconteceram (TIMED ou SCHEDULED)
-      matches = allMatches
-        .filter((m: any) => m.status === 'TIMED' || m.status === 'SCHEDULED')
-        .slice(0, 10);
-
-      // Se ainda assim não houver, pegar os últimos 5 jogos (mesmo que finalizados) para teste
-      if (matches.length === 0) {
-        console.log('⚠️ Nenhum jogo futuro encontrado. Pegando últimos jogos para teste...');
-        matches = allMatches.slice(-5);
-      }
+      console.log('⚠️ Nenhum jogo futuro encontrado. Pegando últimos jogos para análise...');
+      matches = allMatches.slice(-10);
+    } else {
+      // Pegar apenas os próximos 10 jogos para não sobrecarregar a API
+      matches = matches.slice(0, 10);
     }
 
     const standings: StandingTeam[] = standingsResponse.data.standings[0]?.table || [];
