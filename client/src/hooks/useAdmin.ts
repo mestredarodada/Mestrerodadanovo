@@ -5,7 +5,7 @@ export function useAdmin(password: string) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const authenticateMutation = trpc.admin.authenticate.useMutation();
-  const getAllPredictionsMutation = trpc.admin.getAllPredictions.useMutation();
+  const { data: predictionsData, isLoading: isLoadingPredictions, refetch: refetchPredictions, error: predictionsError } = trpc.admin.getAllPredictions.useQuery({ password }, { enabled: isAuthenticated });
   const publishPredictionMutation = trpc.admin.publishPrediction.useMutation();
   const unpublishPredictionMutation = trpc.admin.unpublishPrediction.useMutation();
   const deletePredictionMutation = trpc.admin.deletePrediction.useMutation();
@@ -27,10 +27,10 @@ export function useAdmin(password: string) {
 
   const getAllPredictions = async () => {
     try {
-      const result = await getAllPredictionsMutation.mutateAsync({ password });
-      return result;
+      const result = await refetchPredictions();
+      return result.data || [];
     } catch (error) {
-      console.error('Failed to load predictions:', error);
+      console.error("Failed to load predictions:", error);
       return [];
     }
   };
@@ -83,7 +83,7 @@ export function useAdmin(password: string) {
     unpublishPrediction,
     deletePrediction,
     generateNewPredictions,
-    isLoading: getAllPredictionsMutation.isPending,
+    isLoading: isLoadingPredictions,
     isGenerating: generateNewPredictionsMutation.isPending,
   };
 }
