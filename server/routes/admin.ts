@@ -153,4 +153,30 @@ export const adminRouter = router({
         throw new Error('Falha ao deletar palpite');
       }
     }),
+
+  // Gerar novos palpites
+  generateNewPredictions: publicProcedure
+    .input(z.object({ password: z.string() }))
+    .mutation(async ({ input }) => {
+      if (!verifyAdminPassword(input.password)) {
+        throw new Error('Unauthorized');
+      }
+
+      try {
+        // Importar o serviço de palpites
+        const { generatePredictionsForUpcomingMatches } = await import('../services/predictions.service');
+        
+        // Gerar os palpites
+        const result = await generatePredictionsForUpcomingMatches();
+        
+        return {
+          success: true,
+          message: `${result.created} novos palpites gerados com sucesso!`,
+          created: result.created,
+        };
+      } catch (error) {
+        console.error('Erro ao gerar palpites:', error);
+        throw new Error('Falha ao gerar palpites: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      }
+    }),
 });

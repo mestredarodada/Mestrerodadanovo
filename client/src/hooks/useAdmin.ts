@@ -9,6 +9,7 @@ export function useAdmin(password: string) {
   const publishPredictionMutation = trpc.admin.publishPrediction.useMutation();
   const unpublishPredictionMutation = trpc.admin.unpublishPrediction.useMutation();
   const deletePredictionMutation = trpc.admin.deletePrediction.useMutation();
+  const generateNewPredictionsMutation = trpc.admin.generateNewPredictions.useMutation();
 
   const authenticate = async (pwd: string) => {
     try {
@@ -64,6 +65,16 @@ export function useAdmin(password: string) {
     }
   };
 
+  const generateNewPredictions = async () => {
+    try {
+      const result = await generateNewPredictionsMutation.mutateAsync({ password });
+      return result;
+    } catch (error) {
+      console.error('Failed to generate predictions:', error);
+      throw error;
+    }
+  };
+
   return {
     isAuthenticated,
     authenticate,
@@ -71,6 +82,8 @@ export function useAdmin(password: string) {
     publishPrediction,
     unpublishPrediction,
     deletePrediction,
+    generateNewPredictions,
     isLoading: getAllPredictionsMutation.isPending,
+    isGenerating: generateNewPredictionsMutation.isPending,
   };
 }

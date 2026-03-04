@@ -3,7 +3,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, CheckCircle, Trash2, Send, Lock } from 'lucide-react';
+import { AlertCircle, CheckCircle, Trash2, Send, Lock, Zap } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -34,6 +34,22 @@ export default function Admin() {
     setIsLoading(true);
     const data = await admin.getAllPredictions();
     setPredictions(data);
+    setIsLoading(false);
+  };
+
+  const handleGeneratePredictions = async () => {
+    setIsLoading(true);
+    try {
+      const result = await admin.generateNewPredictions();
+      setMessage({ type: 'success', text: result.message });
+      // Aguardar um pouco e recarregar os palpites
+      setTimeout(() => loadPredictions(), 1000);
+    } catch (error) {
+      setMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Erro ao gerar palpites' 
+      });
+    }
     setIsLoading(false);
   };
 
@@ -152,6 +168,18 @@ export default function Admin() {
           </Alert>
         )}
 
+        <div className="mb-6">
+          <Button
+            onClick={handleGeneratePredictions}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white flex items-center gap-2"
+            disabled={isLoading}
+          >
+            <Zap className="w-5 h-5" />
+            {isLoading ? 'Gerando palpites...' : '🔄 Gerar Novos Palpites'}
+          </Button>
+          <p className="text-slate-400 text-sm mt-2">Clique para buscar os próximos jogos e gerar análises com o Mestre</p>
+        </div>
+
         <div className="grid gap-4">
           {isLoading && predictions.length === 0 ? (
             <Card className="bg-slate-800 border-slate-700">
@@ -162,7 +190,7 @@ export default function Admin() {
           ) : predictions.length === 0 ? (
             <Card className="bg-slate-800 border-slate-700">
               <CardContent className="p-8 text-center">
-                <p className="text-slate-400">Nenhum palpite disponível</p>
+                <p className="text-slate-400">Nenhum palpite disponível. Clique no botão acima para gerar!</p>
               </CardContent>
             </Card>
           ) : (
