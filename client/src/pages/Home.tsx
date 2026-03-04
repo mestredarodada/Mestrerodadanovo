@@ -23,7 +23,7 @@ export default function Home() {
         <div className="container mx-auto px-4 py-4 md:py-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-orange-500 rounded-lg flex items-center justify-center shadow-lg">
                 <Trophy className="text-white" size={24} />
               </div>
               <div>
