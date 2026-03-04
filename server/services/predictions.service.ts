@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import axios from 'axios';
-import { db } from '../db';
+import { getDb } from '../db';
 import { predictions } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
@@ -155,8 +155,10 @@ export async function savePredictionToDatabase(
   awayTeam: StandingTeam,
   geminiPrediction: any
 ) {
+  const database = getDb();
+  
   // Verificar se já existe uma previsão para este jogo
-  const existing = await db
+  const existing = await database
     .select()
     .from(predictions)
     .where(eq(predictions.matchId, match.id))
@@ -208,13 +210,13 @@ export async function savePredictionToDatabase(
 
   if (existing.length > 0) {
     // Atualizar previsão existente
-    await db
+    await database
       .update(predictions)
       .set(predictionData)
       .where(eq(predictions.matchId, match.id));
   } else {
     // Inserir nova previsão
-    await db.insert(predictions).values(predictionData);
+    await database.insert(predictions).values(predictionData);
   }
 }
 

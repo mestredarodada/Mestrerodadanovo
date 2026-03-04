@@ -61,11 +61,12 @@ export const appRouter = router({
 
     predictions: publicProcedure.query(async () => {
       try {
-        const { db } = await import('./db');
+        const { getDb } = await import('./db');
         const { predictions: predictionsTable } = await import('./db/schema');
         const { desc } = await import('drizzle-orm');
         
-        const allPredictions = await db
+        const database = getDb();
+        const allPredictions = await database
           .select()
           .from(predictionsTable)
           .orderBy(desc(predictionsTable.matchDate));
