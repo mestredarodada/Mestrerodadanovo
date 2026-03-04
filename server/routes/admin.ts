@@ -21,23 +21,24 @@ export const adminRouter = router({
     }),
 
   // Listar todos os palpites (publicados e não publicados)
-  getAllPredictions: publicProcedure
+    getAllPredictions: publicProcedure
     .input(z.object({ password: z.string() }))
     .query(async ({ input }) => {
       if (!verifyAdminPassword(input.password)) {
         throw new Error('Unauthorized');
       }
-
       try {
+        console.log('--- BUSCANDO TODOS OS PALPITES PARA O ADMIN ---');
         const db = getDb();
         const allPredictions = await db
           .select()
           .from(predictions)
           .orderBy(predictions.matchDate);
-
+        
+        console.log(`Encontrados ${allPredictions.length} palpites no banco.`);
         return allPredictions;
       } catch (error) {
-        console.error('Erro ao carregar palpites:', error);
+        console.error('Erro ao carregar palpites no admin:', error);
         throw new Error('Falha ao carregar palpites');
       }
     }),
