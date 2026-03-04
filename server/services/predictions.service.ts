@@ -40,7 +40,7 @@ export async function fetchBrazileiraoData() {
       }
     );
 
-    const matchesResponse = await axios.get(
+    let matchesResponse = await axios.get(
       'https://api.football-data.org/v4/competitions/BSA/matches?status=SCHEDULED',
       {
         headers: {
@@ -49,8 +49,35 @@ export async function fetchBrazileiraoData() {
       }
     );
 
+    let matches: MatchData[] = matchesResponse.data.matches || [];
+
+    // Se não houver jogos agendados, buscar todos os jogos e filtrar os próximos
+    if (matches.length === 0) {
+      console.log('⚠️ Nenhum jogo SCHEDULED encontrado. Buscando todos os jogos...');
+      matchesResponse = await axios.get(
+        'https://api.football-data.org/v4/competitions/BSA/matches',
+        {
+          headers: {
+            'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY,
+          },
+        }
+      );
+
+      const allMatches = matchesResponse.data.matches || [];
+      
+      // Filtrar jogos que ainda não aconteceram (TIMED ou SCHEDULED)
+      matches = allMatches
+        .filter((m: any) => m.status === 'TIMED' || m.status === 'SCHEDULED')
+        .slice(0, 10);
+
+      // Se ainda assim não houver, pegar os últimos 5 jogos (mesmo que finalizados) para teste
+      if (matches.length === 0) {
+        console.log('⚠️ Nenhum jogo futuro encontrado. Pegando últimos jogos para teste...');
+        matches = allMatches.slice(-5);
+      }
+    }
+
     const standings: StandingTeam[] = standingsResponse.data.standings[0]?.table || [];
-    const matches: MatchData[] = matchesResponse.data.matches || [];
 
     return { standings, matches };
   } catch (error) {
