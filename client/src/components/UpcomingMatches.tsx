@@ -1,0 +1,82 @@
+import { useMatches } from '@/hooks/useFootballData';
+import { Card } from '@/components/ui/card';
+import { Loader2, Calendar, Clock } from 'lucide-react';
+import { formatDistanceToNow, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+export default function UpcomingMatches() {
+  const { data: matches, loading, error } = useMatches('SCHEDULED');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+        {error}
+      </div>
+    );
+  }
+
+  if (!matches || matches.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        Nenhum jogo agendado
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {matches.slice(0, 12).map((match) => {
+        const matchDate = parseISO(match.utcDate);
+        const timeUntil = formatDistanceToNow(matchDate, {
+          addSuffix: true,
+          locale: ptBR,
+        });
+
+        return (
+          <Card
+            key={match.id}
+            className="p-4 hover:shadow-lg transition-shadow border border-border"
+          >
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+              <Calendar size={14} />
+              <span>{new Date(match.utcDate).toLocaleDateString('pt-BR')}</span>
+              <Clock size={14} />
+              <span>{new Date(match.utcDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 text-right">
+                <p className="font-poppins font-bold text-foreground text-sm">{match.homeTeam.name}</p>
+              </div>
+
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs text-muted-foreground font-medium">vs</span>
+                <span className="text-xs text-muted-foreground">{timeUntil}</span>
+              </div>
+
+              <div className="flex-1 text-left">
+                <p className="font-poppins font-bold text-foreground text-sm">{match.awayTeam.name}</p>
+              </div>
+            </div>
+
+            {match.matchday && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-medium">
+                  Rodada {match.matchday}
+                </span>
+              </div>
+            )}
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
