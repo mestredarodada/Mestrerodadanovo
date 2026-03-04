@@ -76,6 +76,8 @@ export const predictions = pgTable('predictions', {
   // Metadados
   generatedAt: timestamp('generated_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  isPublished: boolean('is_published').default(false).notNull(),
+  publishedAt: timestamp('published_at'),
 });
 
 export type Prediction = typeof predictions.$inferSelect;

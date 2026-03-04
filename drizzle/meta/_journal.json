@@ -8,6 +8,13 @@
       "when": 1772644509832,
       "tag": "0000_freezing_wild_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772646442045,
+      "tag": "0001_cheerful_drax",
+      "breakpoints": true
     }
   ]
 }

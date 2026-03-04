@@ -2,6 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
+import { adminRouter } from "./routes/admin";
 import axios from "axios";
 import { z } from "zod";
 
@@ -63,12 +64,13 @@ export const appRouter = router({
       try {
         const { getDb } = await import('./db');
         const { predictions: predictionsTable } = await import('./db/schema');
-        const { desc } = await import('drizzle-orm');
+        const { desc, eq } = await import('drizzle-orm');
         
         const database = getDb();
         const allPredictions = await database
           .select()
           .from(predictionsTable)
+          .where(eq(predictionsTable.isPublished, true))
           .orderBy(desc(predictionsTable.matchDate));
         
         return allPredictions;
@@ -78,6 +80,7 @@ export const appRouter = router({
       }
     }),
   }),
+  admin: adminRouter,
 });
 
 export type AppRouter = typeof appRouter;
