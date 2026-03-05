@@ -207,14 +207,18 @@ export async function generateAllPredictions() {
   console.log('🚀 Iniciando geração de palpites...');
 
   try {
+    console.log('📡 Buscando dados do Brasileirão...');
     const { standings, matches } = await fetchBrazileiraoData();
+    console.log(`✅ Dados recebidos: ${matches.length} jogos, ${standings.length} times`);
 
     if (matches.length === 0) {
       console.log('❌ Nenhum jogo agendado encontrado.');
-      return;
+      return { generated: 0, errors: 0 };
     }
 
     console.log(`📊 ${matches.length} jogos encontrados. Gerando palpites...`);
+    let generated = 0;
+    let errors = 0;
 
     for (const match of matches) {
       try {
@@ -223,13 +227,16 @@ export async function generateAllPredictions() {
 
         if (!homeTeam || !awayTeam) {
           console.log(`⚠️  Equipes não encontradas para ${match.homeTeam.name} vs ${match.awayTeam.name}`);
+          errors++;
           continue;
         }
 
         console.log(`🤖 Gerando palpite para ${match.homeTeam.name} vs ${match.awayTeam.name}...`);
         const aiPrediction = await generatePredictionWithAI(standings, match);
+        console.log(`✅ IA retornou palpite para ${match.homeTeam.name}`);
 
         await savePredictionToDatabase(match, homeTeam, awayTeam, aiPrediction);
+        generated++;
 
         console.log(`✅ Palpite salvo para ${match.homeTeam.name} vs ${match.awayTeam.name}`);
 
@@ -256,13 +263,15 @@ export async function generateAllPredictions() {
           console.error(`❌ Erro ao enviar para o Telegram (${match.homeTeam.name} vs ${match.awayTeam.name}):`, telegramError);
         }
       } catch (error) {
-        console.error(`❌ Erro ao processar jogo ${match.homeTeam.name} vs ${match.awayTeam.name}:`, error);
+        console.error(`❌ Erro ao processar jogo ${match.homeTeam.name} vs ${match.awayTeam.name}:`, error instanceof Error ? error.message : error);
+        errors++;
       }
     }
 
-    console.log('✨ Geração de palpites concluída!');
+    console.log(`✨ Geração de palpites concluída! Gerados: ${generated}, Erros: ${errors}`);
+    return { generated, errors };
   } catch (error) {
-    console.error('❌ Erro durante a geração de palpites:', error);
+    console.error('❌ Erro durante a geração de palpites:', error instanceof Error ? error.message : error);
     throw error;
   }
 }
