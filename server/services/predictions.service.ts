@@ -3,6 +3,7 @@ import axios from 'axios';
 import { getDb } from '../db';
 import { predictions } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { sendPredictionToTelegram } from './telegram.service';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '',
@@ -212,6 +213,29 @@ export async function generateAllPredictions() {
         await savePredictionToDatabase(match, homeTeam, awayTeam, aiPrediction);
 
         console.log(`✅ Palpite salvo para ${match.homeTeam.name} vs ${match.awayTeam.name}`);
+
+        // Enviar para o Telegram
+        try {
+          await sendPredictionToTelegram({
+            homeTeamName: match.homeTeam.name,
+            awayTeamName: match.awayTeam.name,
+            mainPrediction: aiPrediction.mainPrediction,
+            mainConfidence: aiPrediction.mainConfidence,
+            goalsPrediction: aiPrediction.goalsPrediction,
+            goalsConfidence: aiPrediction.goalsConfidence,
+            cornersPrediction: aiPrediction.cornersPrediction,
+            cornersConfidence: aiPrediction.cornersConfidence,
+            cardsPrediction: aiPrediction.cardsPrediction,
+            cardsConfidence: aiPrediction.cardsConfidence,
+            bothTeamsToScore: aiPrediction.bothTeamsToScore,
+            bothTeamsToScoreConfidence: aiPrediction.bothTeamsToScoreConfidence,
+            justification: aiPrediction.justification,
+            matchDate: new Date(match.utcDate),
+          });
+          console.log(`📤 Palpite enviado para o Telegram: ${match.homeTeam.name} vs ${match.awayTeam.name}`);
+        } catch (telegramError) {
+          console.error(`❌ Erro ao enviar para o Telegram (${match.homeTeam.name} vs ${match.awayTeam.name}):`, telegramError);
+        }
       } catch (error) {
         console.error(`❌ Erro ao processar jogo ${match.homeTeam.name} vs ${match.awayTeam.name}:`, error);
       }
