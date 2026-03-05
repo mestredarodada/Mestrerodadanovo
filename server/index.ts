@@ -20,7 +20,21 @@ async function startServer() {
   app.use(express.static(staticPath));
 
   // Handle client-side routing - serve index.html for all routes
-  app.use("/api/predictions", apiRouter); // Usar as rotas da API
+  // API REST Routes
+  app.use("/api/predictions", apiRouter);
+
+  // tRPC API (usado pelo Admin)
+  const { appRouter } = await import("./routers");
+  const { createContext } = await import("./_core/context");
+  const { createExpressMiddleware } = await import("@trpc/server/adapters/express");
+  
+  app.use(
+    "/api/trpc",
+    createExpressMiddleware({
+      router: appRouter,
+      createContext,
+    })
+  );
 
   app.get("*", (_req, res) => {
     res.sendFile(path.join(staticPath, "index.html"));

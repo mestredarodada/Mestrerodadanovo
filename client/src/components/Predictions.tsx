@@ -1,9 +1,16 @@
 import { motion } from 'framer-motion';
-import { usePredictions } from '@/hooks/usePredictions';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { Trophy, TrendingUp, AlertCircle, Zap } from 'lucide-react';
 
 export default function Predictions() {
-  const { data: predictions, isLoading, error } = usePredictions();
+  const { data: predictions, isLoading, error } = useQuery({
+    queryKey: ['predictions'],
+    queryFn: async () => {
+      const response = await axios.get('/api/predictions');
+      return response.data;
+    }
+  });
 
   if (isLoading) {
     return (
@@ -51,14 +58,18 @@ export default function Predictions() {
           <div className="bg-gradient-to-r from-blue-600/10 to-orange-600/10 p-4 border-b border-border">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
-                <img
-                  src={prediction.homeTeamCrest || ''}
-                  alt={prediction.homeTeamName}
-                  className="w-8 h-8 object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+                {prediction.homeTeamCrest ? (
+                  <img
+                    src={prediction.homeTeamCrest}
+                    alt={prediction.homeTeamName}
+                    className="w-8 h-8 object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <Trophy size={20} className="text-muted-foreground" />
+                )}
                 <div>
                   <p className="font-poppins font-bold text-sm">{prediction.homeTeamName}</p>
                   <p className="text-xs text-muted-foreground">Pos. {prediction.homeTeamPosition}</p>
@@ -79,14 +90,18 @@ export default function Predictions() {
                   <p className="font-poppins font-bold text-sm">{prediction.awayTeamName}</p>
                   <p className="text-xs text-muted-foreground">Pos. {prediction.awayTeamPosition}</p>
                 </div>
-                <img
-                  src={prediction.awayTeamCrest || ''}
-                  alt={prediction.awayTeamName}
-                  className="w-8 h-8 object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+                {prediction.awayTeamCrest ? (
+                  <img
+                    src={prediction.awayTeamCrest}
+                    alt={prediction.awayTeamName}
+                    className="w-8 h-8 object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <Trophy size={20} className="text-muted-foreground" />
+                )}
               </div>
             </div>
           </div>

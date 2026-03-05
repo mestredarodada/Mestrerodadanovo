@@ -170,6 +170,7 @@ export async function savePredictionToDatabase(
     bothTeamsToScore: aiPrediction.bothTeamsToScore || null,
     bothTeamsToScoreConfidence: aiPrediction.bothTeamsToScoreConfidence || null,
     justification: aiPrediction.justification || 'Justificativa não gerada.',
+    isPublished: false, // Por padrão, não publica automaticamente
   };
 
   if (existing.length > 0) {

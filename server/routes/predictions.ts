@@ -12,6 +12,7 @@ router.get('/', async (req, res) => {
     const allPredictions = await db
       .select()
       .from(predictions)
+      .where(eq(predictions.isPublished, true))
       .orderBy(desc(predictions.matchDate));
 
     res.json(allPredictions);
