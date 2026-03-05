@@ -5,9 +5,12 @@ import { eq } from 'drizzle-orm';
 import { sendPredictionToTelegram } from './telegram.service';
 import { fetchLatestFootballNews } from './news.service';
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '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';
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const MODEL = 'google/gemini-2.0-flash-lite-preview-02-05:free';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+if (!GROQ_API_KEY) {
+  throw new Error('GROQ_API_KEY environment variable is not set');
+}
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const MODEL = 'llama-3.3-70b-versatile';
 
 interface MatchData {
   id: string;
@@ -84,26 +87,84 @@ export async function generatePredictionWithAI(
   const awayTeam = standings.find((t) => t.team.id === match.awayTeam.id);
   const latestNews = await fetchLatestFootballNews();
 
-  const prompt = `Você é o "Mestre da Rodada", um analista de futebol especializado em palpites para o Brasileirão Série A 2026.\nSua tarefa é analisar o próximo jogo e gerar um palpite bem fundamentado com análises detalhadas.\n\n## NOTÍCIAS RECENTES:\n${latestNews}\n\n## DADOS DO JOGO:\n- **Data**: ${new Date(match.utcDate).toLocaleDateString('pt-BR')}\n- **Rodada**: ${match.matchday}\n- **Estádio**: ${match.venue || 'Não informado'}\n\n## TIME DA CASA:\n- **Nome**: ${homeTeam?.team.name || match.homeTeam.name}\n- **Posição**: ${homeTeam?.position}º lugar\n- **Pontos**: ${homeTeam?.points}\n- **Jogos**: ${homeTeam?.playedGames}\n- **Vitórias**: ${homeTeam?.won} | **Empates**: ${homeTeam?.draw} | **Derrotas**: ${homeTeam?.lost}\n- **Gols Pró**: ${homeTeam?.goalsFor} | **Gols Contra**: ${homeTeam?.goalsAgainst} | **Saldo**: ${homeTeam?.goalDifference}\n\n## TIME VISITANTE:\n- **Nome**: ${awayTeam?.team.name || match.awayTeam.name}\n- **Posição**: ${awayTeam?.position}º lugar\n- **Pontos**: ${awayTeam?.points}\n- **Jogos**: ${awayTeam?.playedGames}\n- **Vitórias**: ${awayTeam?.won} | **Empates**: ${awayTeam?.draw} | **Derrotas**: ${awayTeam?.lost}\n- **Gols Pró**: ${awayTeam?.goalsFor} | **Gols Contra**: ${awayTeam?.goalsAgainst} | **Saldo**: ${awayTeam?.goalDifference}\n\n## INSTRUÇÕES:\n1. Analise os dados estatísticos de ambos os times.\n2. Considere o fator mando de campo (time da casa tem vantagem).\n3. Avalie a forma atual (pontos recentes, saldo de gols).\n4. Gere um palpite estruturado com:\n   - **Vencedor Provável**: Qual time tem mais chances de vencer\n   - **Confiança**: Alta/Média/Baixa\n   - **Previsão de Gols**: Over/Under 2.5 gols\n   - **Dica Extra**: Ambas Marcam, Escanteios, Cartões, etc\n   - **Justificativa**: Um parágrafo explicando seu raciocínio\n\nResponda APENAS em JSON válido com a seguinte estrutura exata (sem markdown, sem explicações adicionais):\n{\n  "mainPrediction": "HOME|DRAW|AWAY",\n  "mainConfidence": "HIGH|MEDIUM|LOW",\n  "goalsPrediction": "OVER_2_5|UNDER_2_5",\n  "goalsConfidence": "HIGH|MEDIUM|LOW",\n  "extraTip": "Descrição da dica (ex: Ambas Marcam SIM, Over 9 Escanteios)",\n  "extraConfidence": "HIGH|MEDIUM|LOW",\n  "cornersPrediction": "OVER_9|UNDER_9",\n  "cornersConfidence": "HIGH|MEDIUM|LOW",\n  "cardsPrediction": "OVER_4_5|UNDER_4_5",\n  "cardsConfidence": "HIGH|MEDIUM|LOW",\n  "bothTeamsToScore": "YES|NO",\n  "bothTeamsToScoreConfidence": "HIGH|MEDIUM|LOW",\n  "justification": "Parágrafo explicativo detalhado"\n}`;
+  const prompt = `Você é o "Mestre da Rodada", um analista de futebol especializado em palpites para o Brasileirão Série A 2026.
+Sua tarefa é analisar o próximo jogo e gerar um palpite bem fundamentado com análises detalhadas.
+
+## NOTÍCIAS RECENTES:
+${latestNews}
+
+## DADOS DO JOGO:
+- **Data**: ${new Date(match.utcDate).toLocaleDateString('pt-BR')}
+- **Rodada**: ${match.matchday}
+- **Estádio**: ${match.venue || 'Não informado'}
+
+## TIME DA CASA:
+- **Nome**: ${homeTeam?.team.name || match.homeTeam.name}
+- **Posição**: ${homeTeam?.position}º lugar
+- **Pontos**: ${homeTeam?.points}
+- **Jogos**: ${homeTeam?.playedGames}
+- **Vitórias**: ${homeTeam?.won} | **Empates**: ${homeTeam?.draw} | **Derrotas**: ${homeTeam?.lost}
+- **Gols Pró**: ${homeTeam?.goalsFor} | **Gols Contra**: ${homeTeam?.goalsAgainst} | **Saldo**: ${homeTeam?.goalDifference}
+
+## TIME VISITANTE:
+- **Nome**: ${awayTeam?.team.name || match.awayTeam.name}
+- **Posição**: ${awayTeam?.position}º lugar
+- **Pontos**: ${awayTeam?.points}
+- **Jogos**: ${awayTeam?.playedGames}
+- **Vitórias**: ${awayTeam?.won} | **Empates**: ${awayTeam?.draw} | **Derrotas**: ${awayTeam?.lost}
+- **Gols Pró**: ${awayTeam?.goalsFor} | **Gols Contra**: ${awayTeam?.goalsAgainst} | **Saldo**: ${awayTeam?.goalDifference}
+
+## INSTRUÇÕES:
+1. Analise os dados estatísticos de ambos os times.
+2. Considere o fator mando de campo (time da casa tem vantagem).
+3. Avalie a forma atual (pontos recentes, saldo de gols).
+4. Gere um palpite estruturado com:
+   - **Vencedor Provável**: Qual time tem mais chances de vencer
+   - **Confiança**: Alta/Média/Baixa
+   - **Previsão de Gols**: Over/Under 2.5 gols
+   - **Dica Extra**: Ambas Marcam, Escanteios, Cartões, etc
+   - **Justificativa**: Um parágrafo explicando seu raciocínio
+
+Responda APENAS em JSON válido com a seguinte estrutura exata (sem markdown, sem explicações adicionais):
+{
+  "mainPrediction": "HOME|DRAW|AWAY",
+  "mainConfidence": "HIGH|MEDIUM|LOW",
+  "goalsPrediction": "OVER_2_5|UNDER_2_5",
+  "goalsConfidence": "HIGH|MEDIUM|LOW",
+  "extraTip": "Descrição da dica (ex: Ambas Marcam SIM, Over 9 Escanteios)",
+  "extraConfidence": "HIGH|MEDIUM|LOW",
+  "cornersPrediction": "OVER_9|UNDER_9",
+  "cornersConfidence": "HIGH|MEDIUM|LOW",
+  "cardsPrediction": "OVER_4_5|UNDER_4_5",
+  "cardsConfidence": "HIGH|MEDIUM|LOW",
+  "bothTeamsToScore": "YES|NO",
+  "bothTeamsToScoreConfidence": "HIGH|MEDIUM|LOW",
+  "justification": "Parágrafo explicativo detalhado"
+}`;
 
   try {
+    console.log(`🤖 Chamando Groq (Llama 3.3 70B) para ${homeTeam?.team.name} vs ${awayTeam?.team.name}...`);
     const response = await axios.post(
-      OPENROUTER_URL,
+      GROQ_URL,
       {
         model: MODEL,
         messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 1024,
       },
       {
         headers: {
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'HTTP-Referer': 'https://mestredarodada.onrender.com',
-          'X-Title': 'Mestre da Rodada',
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
           'Content-Type': 'application/json',
         },
+        timeout: 30000,
       }
     );
 
+    console.log('✅ Resposta recebida do Groq');
     const responseText = response.data.choices[0].message.content || '{}';
+    console.log(`📄 Resposta da IA (primeiros 200 caracteres): ${responseText.substring(0, 200)}`);
+    
     // Limpar markdown se a IA retornar
     const cleanedJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const prediction = JSON.parse(cleanedJson);
@@ -124,7 +185,10 @@ export async function generatePredictionWithAI(
       justification: prediction.justification,
     };
   } catch (error) {
-    console.error('Erro ao gerar palpite com OpenRouter:', error);
+    console.error('❌ Erro ao gerar palpite com Groq:', error instanceof Error ? error.message : error);
+    if (error instanceof Error && error.message.includes('401')) {
+      console.error('❌ Erro de autenticacao: Verifique a chave da API do Groq');
+    }
     throw error;
   }
 }
@@ -148,58 +212,37 @@ export async function savePredictionToDatabase(
 
   const predictionData = {
     matchId: String(match.id),
-    homeTeamId: String(match.homeTeam.id),
-    homeTeamName: match.homeTeam.name,
-    homeTeamCrest: match.homeTeam.crest,
-    awayTeamId: String(match.awayTeam.id),
-    awayTeamName: match.awayTeam.name,
-    awayTeamCrest: match.awayTeam.crest,
+    homeTeamName: homeTeam.team.name,
+    awayTeamName: awayTeam.team.name,
+    homeTeamCrest: homeTeam.team.crest,
+    awayTeamCrest: awayTeam.team.crest,
     matchDate: new Date(match.utcDate),
-    matchday: String(match.matchday),
-    venue: match.venue,
-    homeTeamPosition: homeTeam.position,
-    homeTeamPoints: homeTeam.points,
-    homeTeamPlayedGames: homeTeam.playedGames,
-    homeTeamWon: homeTeam.won,
-    homeTeamDraw: homeTeam.draw,
-    homeTeamLost: homeTeam.lost,
-    homeTeamGoalsFor: homeTeam.goalsFor,
-    homeTeamGoalsAgainst: homeTeam.goalsAgainst,
-    homeTeamGoalDifference: homeTeam.goalDifference,
-    awayTeamPosition: awayTeam.position,
-    awayTeamPoints: awayTeam.points,
-    awayTeamPlayedGames: awayTeam.playedGames,
-    awayTeamWon: awayTeam.won,
-    awayTeamDraw: awayTeam.draw,
-    awayTeamLost: awayTeam.lost,
-    awayTeamGoalsFor: awayTeam.goalsFor,
-    awayTeamGoalsAgainst: awayTeam.goalsAgainst,
-    awayTeamGoalDifference: awayTeam.goalDifference,
-    mainPrediction: aiPrediction.mainPrediction || 'DRAW',
-    mainConfidence: aiPrediction.mainConfidence || 'MEDIUM',
-    goalsPrediction: aiPrediction.goalsPrediction || 'UNDER_2_5',
-    goalsConfidence: aiPrediction.goalsConfidence || 'MEDIUM',
-    extraTip: aiPrediction.extraTip || 'Análise em processamento',
-    extraConfidence: aiPrediction.extraConfidence || 'MEDIUM',
-    cornersPrediction: aiPrediction.cornersPrediction || null,
-    cornersConfidence: aiPrediction.cornersConfidence || null,
-    cardsPrediction: aiPrediction.cardsPrediction || null,
-    cardsConfidence: aiPrediction.cardsConfidence || null,
-    bothTeamsToScore: aiPrediction.bothTeamsToScore || null,
-    bothTeamsToScoreConfidence: aiPrediction.bothTeamsToScoreConfidence || null,
-    justification: aiPrediction.justification || 'Justificativa não gerada.',
-    isPublished: false, // Por padrão, não publica automaticamente
+    mainPrediction: aiPrediction.mainPrediction,
+    mainConfidence: aiPrediction.mainConfidence,
+    goalsPrediction: aiPrediction.goalsPrediction,
+    goalsConfidence: aiPrediction.goalsConfidence,
+    extraTip: aiPrediction.extraTip,
+    extraConfidence: aiPrediction.extraConfidence,
+    cornersPrediction: aiPrediction.cornersPrediction,
+    cornersConfidence: aiPrediction.cornersConfidence,
+    cardsPrediction: aiPrediction.cardsPrediction,
+    cardsConfidence: aiPrediction.cardsConfidence,
+    bothTeamsToScore: aiPrediction.bothTeamsToScore,
+    bothTeamsToScoreConfidence: aiPrediction.bothTeamsToScoreConfidence,
+    justification: aiPrediction.justification,
+    isPublished: false,
+    publishedAt: null,
   };
 
-  if (existing.length > 0) {
-    // Atualizar previsão existente
+  if (existing.length === 0) {
+    console.log(`➕ Inserindo novo palpite para ${homeTeam.team.name} vs ${awayTeam.team.name}`);
+    await database.insert(predictions).values(predictionData);
+  } else {
+    console.log(`🔄 Atualizando palpite existente para ${homeTeam.team.name} vs ${awayTeam.team.name}`);
     await database
       .update(predictions)
       .set(predictionData)
       .where(eq(predictions.matchId, String(match.id)));
-  } else {
-    // Inserir nova previsão
-    await database.insert(predictions).values(predictionData);
   }
 }
 
@@ -243,18 +286,15 @@ export async function generateAllPredictions() {
         // Enviar para o Telegram
         try {
           await sendPredictionToTelegram({
-            homeTeamName: match.homeTeam.name,
-            awayTeamName: match.awayTeam.name,
+            homeTeamName: homeTeam.team.name,
+            awayTeamName: awayTeam.team.name,
             mainPrediction: aiPrediction.mainPrediction,
             mainConfidence: aiPrediction.mainConfidence,
             goalsPrediction: aiPrediction.goalsPrediction,
             goalsConfidence: aiPrediction.goalsConfidence,
-            cornersPrediction: aiPrediction.cornersPrediction,
-            cornersConfidence: aiPrediction.cornersConfidence,
-            cardsPrediction: aiPrediction.cardsPrediction,
-            cardsConfidence: aiPrediction.cardsConfidence,
-            bothTeamsToScore: aiPrediction.bothTeamsToScore,
-            bothTeamsToScoreConfidence: aiPrediction.bothTeamsToScoreConfidence,
+            cornersPrediction: aiPrediction.cornersPrediction || undefined,
+            cardsPrediction: aiPrediction.cardsPrediction || undefined,
+            bothTeamsToScore: aiPrediction.bothTeamsToScore || undefined,
             justification: aiPrediction.justification,
             matchDate: new Date(match.utcDate),
           });
