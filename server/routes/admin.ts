@@ -23,7 +23,7 @@ export const adminRouter = router({
   // Listar todos os palpites (publicados e não publicados)
     getAllPredictions: publicProcedure
     .input(z.object({ password: z.string() }))
-    .mutation(async ({ input }) => {
+    .query(async ({ input }) => {
       if (!verifyAdminPassword(input.password)) {
         throw new Error('Unauthorized');
       }
