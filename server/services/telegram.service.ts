@@ -52,24 +52,31 @@ export async function sendPredictionToTelegram(prediction: TelegramMessage): Pro
       minute: '2-digit',
     });
 
+    const escapeMarkdown = (text: string) => {
+      return text.replace(/_/g, '\\_').replace(/\*/g, '\\*').replace(/\[/g, '\\[')
+                 .replace(/\]/g, '\\]').replace(/\(/g, '\\(').replace(/\)/g, '\\)')
+                 .replace(/~/g, '\\~').replace(/`/g, '\\`').replace(/>/g, '\\>')
+                 .replace(/#/g, '\\#').replace(/\+/g, '\\+').replace(/-/g, '\\-')
+                 .replace(/=/g, '\\=').replace(/\|/g, '\\|').replace(/{/g, '\\{')
+                 .replace(/}/g, '\\}').replace(/\./g, '\\.').replace(/!/g, '\\!');
+    };
+
     const message = `
 🏆 *PALPITE DO MESTRE DA RODADA* 🏆
 
-⚽ *${prediction.homeTeamName} vs ${prediction.awayTeamName}*
+⚽ *${escapeMarkdown(prediction.homeTeamName)} vs ${escapeMarkdown(prediction.awayTeamName)}*
 📅 ${matchDateFormatted}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 *VENCEDOR*
-${confidenceEmoji[prediction.mainConfidence as keyof typeof confidenceEmoji] || '⭐'} ${prediction.mainPrediction === 'HOME' ? prediction.homeTeamName : prediction.mainPrediction === 'AWAY' ? prediction.awayTeamName : 'Empate'} (${prediction.mainConfidence})
+${confidenceEmoji[prediction.mainConfidence as keyof typeof confidenceEmoji] || '⭐'} ${escapeMarkdown(prediction.mainPrediction === 'HOME' ? prediction.homeTeamName : prediction.mainPrediction === 'AWAY' ? prediction.awayTeamName : 'Empate')} (${prediction.mainConfidence})
 
 ⚽ *GOLS*
-${confidenceEmoji[prediction.goalsConfidence as keyof typeof confidenceEmoji] || '⭐'} ${prediction.goalsPrediction} (${prediction.goalsConfidence})
+${confidenceEmoji[prediction.goalsConfidence as keyof typeof confidenceEmoji] || '⭐'} ${escapeMarkdown(prediction.goalsPrediction)} (${prediction.goalsConfidence})
 
-${prediction.cornersPrediction ? `🚩 *ESCANTEIOS*\n${confidenceEmoji[prediction.cornersConfidence as keyof typeof confidenceEmoji] || '⭐'} ${prediction.cornersPrediction} (${prediction.cornersConfidence})\n\n` : ''}${prediction.cardsPrediction ? `🟨 *CARTÕES*\n${confidenceEmoji[prediction.cardsConfidence as keyof typeof confidenceEmoji] || '⭐'} ${prediction.cardsPrediction} (${prediction.cardsConfidence})\n\n` : ''}${prediction.bothTeamsToScore ? `🎯 *AMBAS MARCAM*\n${confidenceEmoji[prediction.bothTeamsToScoreConfidence as keyof typeof confidenceEmoji] || '⭐'} ${prediction.bothTeamsToScore} (${prediction.bothTeamsToScoreConfidence})\n\n` : ''}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${prediction.cornersPrediction ? `🚩 *ESCANTEIOS*\n${confidenceEmoji[prediction.cornersConfidence as keyof typeof confidenceEmoji] || '⭐'} ${escapeMarkdown(prediction.cornersPrediction)} (${prediction.cornersConfidence})\n\n` : ''}${prediction.cardsPrediction ? `🟨 *CARTÕES*\n${confidenceEmoji[prediction.cardsConfidence as keyof typeof confidenceEmoji] || '⭐'} ${escapeMarkdown(prediction.cardsPrediction)} (${prediction.cardsConfidence})\n\n` : ''}${prediction.bothTeamsToScore ? `🎯 *AMBAS MARCAM*\n${confidenceEmoji[prediction.bothTeamsToScoreConfidence as keyof typeof confidenceEmoji] || '⭐'} ${escapeMarkdown(prediction.bothTeamsToScore)} (${prediction.bothTeamsToScoreConfidence})\n\n` : ''}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📝 *ANÁLISE*
-${prediction.justification}
-
+📝 *ANÁLISE*\n${escapeMarkdown(prediction.justification)}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 Boa sorte com seus palpites! 🍀
     `;

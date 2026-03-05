@@ -9,6 +9,7 @@ let _pool: Pool | null = null;
 export function getDb() {
   if (!_db) {
     const connectionString = process.env.DATABASE_URL;
+
     if (!connectionString) {
       console.warn("[Database] DATABASE_URL not set, database operations will fail");
       throw new Error("DATABASE_URL environment variable is not set");
