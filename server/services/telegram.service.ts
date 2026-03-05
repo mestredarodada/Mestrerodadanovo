@@ -65,7 +65,7 @@ ${confidenceEmoji[prediction.mainConfidence as keyof typeof confidenceEmoji] || 
 ⚽ *GOLS*
 ${confidenceEmoji[prediction.goalsConfidence as keyof typeof confidenceEmoji] || '⭐'} ${prediction.goalsPrediction} (${prediction.goalsConfidence})
 
-${prediction.cornersPrediction ? `🚩 *ESCANTEIOS*\n${confidenceEmoji[prediction.cornersConfidence as keyof typeof confidenceEmoji] || '⭐'} ${prediction.cornersPrediction} (${prediction.cornersConfidence})\n\n` : ''}${prediction.cardsPrediction ? `🟨 *CARTÕES*\n${confidenceEmoji[prediction.cardsConfidence as keyof typeof confidenceEmoji] || '⭐'} ${prediction.cardsPrediction} (${prediction.cardsConfidence})\n\n` : ''}${prediction.bothTeamsToScore ? `🎯 *AMBAS MARCAM*\n${confidenceEmoji[prediction.bothTeamsToScore as keyof typeof confidenceEmoji] || '⭐'} ${prediction.bothTeamsToScore} (${prediction.mainConfidence})\n\n` : ''}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${prediction.cornersPrediction ? `🚩 *ESCANTEIOS*\n${confidenceEmoji[prediction.cornersConfidence as keyof typeof confidenceEmoji] || '⭐'} ${prediction.cornersPrediction} (${prediction.cornersConfidence})\n\n` : ''}${prediction.cardsPrediction ? `🟨 *CARTÕES*\n${confidenceEmoji[prediction.cardsConfidence as keyof typeof confidenceEmoji] || '⭐'} ${prediction.cardsPrediction} (${prediction.cardsConfidence})\n\n` : ''}${prediction.bothTeamsToScore ? `🎯 *AMBAS MARCAM*\n${confidenceEmoji[prediction.bothTeamsToScoreConfidence as keyof typeof confidenceEmoji] || '⭐'} ${prediction.bothTeamsToScore} (${prediction.bothTeamsToScoreConfidence})\n\n` : ''}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📝 *ANÁLISE*
 ${prediction.justification}
