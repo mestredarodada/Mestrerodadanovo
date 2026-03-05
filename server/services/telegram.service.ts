@@ -34,14 +34,14 @@ export async function sendPredictionToTelegram(prediction: TelegramMessage): Pro
       'HOME': '🏠',
       'DRAW': '🤝',
       'AWAY': '✈️',
-      'OVER_2_5': '⬆️',
-      'UNDER_2_5': '⬇️',
+	      'OVER_2_5': '⬆️',
+	      'UNDER_2_5': '⬇️',
       'YES': '✅',
       'NO': '❌',
-      'OVER_9': '⬆️',
-      'UNDER_9': '⬇️',
-      'OVER_4_5': '⬆️',
-      'UNDER_4_5': '⬇️',
+	      'OVER_9': '⬆️',
+	      'UNDER_9': '⬇️',
+	      'OVER_4_5': '⬆️',
+	      'UNDER_4_5': '⬇️',
     };
 
     const matchDateFormatted = new Date(prediction.matchDate).toLocaleString('pt-BR', {
