@@ -1,13 +1,13 @@
-import { OpenAI } from 'openai';
 import axios from 'axios';
 import { getDb } from '../db';
 import { predictions } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { sendPredictionToTelegram } from './telegram.service';
+import { fetchLatestFootballNews } from './news.service';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '',
-});
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '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';
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const MODEL = 'google/gemini-2.0-flash-lite-preview-02-05:free';
 
 interface MatchData {
   id: string;
@@ -76,39 +76,57 @@ export async function fetchBrazileiraoData() {
   }
 }
 
-export async function generatePredictionWithOpenAI(
+export async function generatePredictionWithAI(
   standings: StandingTeam[],
   match: MatchData
 ) {
   const homeTeam = standings.find((t) => t.team.id === match.homeTeam.id);
   const awayTeam = standings.find((t) => t.team.id === match.awayTeam.id);
+  const latestNews = await fetchLatestFootballNews();
 
-  const prompt = `Você é o "Mestre da Rodada", um analista de futebol especializado em palpites para o Brasileirão Série A 2026.\nSua tarefa é analisar o próximo jogo e gerar um palpite bem fundamentado com análises detalhadas.\n\n## DADOS DO JOGO:\n- **Data**: ${new Date(match.utcDate).toLocaleDateString('pt-BR')}\n- **Rodada**: ${match.matchday}\n- **Estádio**: ${match.venue || 'Não informado'}\n\n## TIME DA CASA:\n- **Nome**: ${homeTeam?.team.name || match.homeTeam.name}\n- **Posição**: ${homeTeam?.position}º lugar\n- **Pontos**: ${homeTeam?.points}\n- **Jogos**: ${homeTeam?.playedGames}\n- **Vitórias**: ${homeTeam?.won} | **Empates**: ${homeTeam?.draw} | **Derrotas**: ${homeTeam?.lost}\n- **Gols Pró**: ${homeTeam?.goalsFor} | **Gols Contra**: ${homeTeam?.goalsAgainst} | **Saldo**: ${homeTeam?.goalDifference}\n\n## TIME VISITANTE:\n- **Nome**: ${awayTeam?.team.name || match.awayTeam.name}\n- **Posição**: ${awayTeam?.position}º lugar\n- **Pontos**: ${awayTeam?.points}\n- **Jogos**: ${awayTeam?.playedGames}\n- **Vitórias**: ${awayTeam?.won} | **Empates**: ${awayTeam?.draw} | **Derrotas**: ${awayTeam?.lost}\n- **Gols Pró**: ${awayTeam?.goalsFor} | **Gols Contra**: ${awayTeam?.goalsAgainst} | **Saldo**: ${awayTeam?.goalDifference}\n\n## INSTRUÇÕES:\n1. Analise os dados estatísticos de ambos os times.\n2. Considere o fator mando de campo (time da casa tem vantagem).\n3. Avalie a forma atual (pontos recentes, saldo de gols).\n4. Gere um palpite estruturado com:\n   - **Vencedor Provável**: Qual time tem mais chances de vencer\n   - **Confiança**: Alta/Média/Baixa\n   - **Previsão de Gols**: Over/Under 2.5 gols\n   - **Dica Extra**: Ambas Marcam, Escanteios, Cartões, etc\n   - **Justificativa**: Um parágrafo explicando seu raciocínio\n\nResponda APENAS em JSON válido com a seguinte estrutura exata (sem markdown, sem explicações adicionais):\n{\n  "mainPrediction": "HOME|DRAW|AWAY",\n  "mainConfidence": "HIGH|MEDIUM|LOW",\n  "goalsPrediction": "OVER_2_5|UNDER_2_5",\n  "goalsConfidence": "HIGH|MEDIUM|LOW",\n  "extraTip": "Descrição da dica (ex: Ambas Marcam SIM, Over 9 Escanteios)",\n  "extraConfidence": "HIGH|MEDIUM|LOW",\n  "cornersPrediction": "OVER_9|UNDER_9",\n  "cornersConfidence": "HIGH|MEDIUM|LOW",\n  "cardsPrediction": "OVER_4_5|UNDER_4_5",\n  "cardsConfidence": "HIGH|MEDIUM|LOW",\n  "bothTeamsToScore": "YES|NO",\n  "bothTeamsToScoreConfidence": "HIGH|MEDIUM|LOW",\n  "justification": "Parágrafo explicativo detalhado"\n}`;
+  const prompt = `Você é o "Mestre da Rodada", um analista de futebol especializado em palpites para o Brasileirão Série A 2026.\nSua tarefa é analisar o próximo jogo e gerar um palpite bem fundamentado com análises detalhadas.\n\n## NOTÍCIAS RECENTES:\n${latestNews}\n\n## DADOS DO JOGO:\n- **Data**: ${new Date(match.utcDate).toLocaleDateString('pt-BR')}\n- **Rodada**: ${match.matchday}\n- **Estádio**: ${match.venue || 'Não informado'}\n\n## TIME DA CASA:\n- **Nome**: ${homeTeam?.team.name || match.homeTeam.name}\n- **Posição**: ${homeTeam?.position}º lugar\n- **Pontos**: ${homeTeam?.points}\n- **Jogos**: ${homeTeam?.playedGames}\n- **Vitórias**: ${homeTeam?.won} | **Empates**: ${homeTeam?.draw} | **Derrotas**: ${homeTeam?.lost}\n- **Gols Pró**: ${homeTeam?.goalsFor} | **Gols Contra**: ${homeTeam?.goalsAgainst} | **Saldo**: ${homeTeam?.goalDifference}\n\n## TIME VISITANTE:\n- **Nome**: ${awayTeam?.team.name || match.awayTeam.name}\n- **Posição**: ${awayTeam?.position}º lugar\n- **Pontos**: ${awayTeam?.points}\n- **Jogos**: ${awayTeam?.playedGames}\n- **Vitórias**: ${awayTeam?.won} | **Empates**: ${awayTeam?.draw} | **Derrotas**: ${awayTeam?.lost}\n- **Gols Pró**: ${awayTeam?.goalsFor} | **Gols Contra**: ${awayTeam?.goalsAgainst} | **Saldo**: ${awayTeam?.goalDifference}\n\n## INSTRUÇÕES:\n1. Analise os dados estatísticos de ambos os times.\n2. Considere o fator mando de campo (time da casa tem vantagem).\n3. Avalie a forma atual (pontos recentes, saldo de gols).\n4. Gere um palpite estruturado com:\n   - **Vencedor Provável**: Qual time tem mais chances de vencer\n   - **Confiança**: Alta/Média/Baixa\n   - **Previsão de Gols**: Over/Under 2.5 gols\n   - **Dica Extra**: Ambas Marcam, Escanteios, Cartões, etc\n   - **Justificativa**: Um parágrafo explicando seu raciocínio\n\nResponda APENAS em JSON válido com a seguinte estrutura exata (sem markdown, sem explicações adicionais):\n{\n  "mainPrediction": "HOME|DRAW|AWAY",\n  "mainConfidence": "HIGH|MEDIUM|LOW",\n  "goalsPrediction": "OVER_2_5|UNDER_2_5",\n  "goalsConfidence": "HIGH|MEDIUM|LOW",\n  "extraTip": "Descrição da dica (ex: Ambas Marcam SIM, Over 9 Escanteios)",\n  "extraConfidence": "HIGH|MEDIUM|LOW",\n  "cornersPrediction": "OVER_9|UNDER_9",\n  "cornersConfidence": "HIGH|MEDIUM|LOW",\n  "cardsPrediction": "OVER_4_5|UNDER_4_5",\n  "cardsConfidence": "HIGH|MEDIUM|LOW",\n  "bothTeamsToScore": "YES|NO",\n  "bothTeamsToScoreConfidence": "HIGH|MEDIUM|LOW",\n  "justification": "Parágrafo explicativo detalhado"\n}`;
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [{ role: 'user', content: prompt }],
-    response_format: { type: 'json_object' },
-  });
+  try {
+    const response = await axios.post(
+      OPENROUTER_URL,
+      {
+        model: MODEL,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'HTTP-Referer': 'https://mestredarodada.onrender.com',
+          'X-Title': 'Mestre da Rodada',
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-  const responseText = response.choices[0].message.content || '{}';
-  const prediction = JSON.parse(responseText);
+    const responseText = response.data.choices[0].message.content || '{}';
+    // Limpar markdown se a IA retornar
+    const cleanedJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const prediction = JSON.parse(cleanedJson);
 
-  return {
-    mainPrediction: prediction.mainPrediction,
-    mainConfidence: prediction.mainConfidence,
-    goalsPrediction: prediction.goalsPrediction,
-    goalsConfidence: prediction.goalsConfidence,
-    extraTip: prediction.extraTip,
-    extraConfidence: prediction.extraConfidence,
-    cornersPrediction: prediction.cornersPrediction,
-    cornersConfidence: prediction.cornersConfidence,
-    cardsPrediction: prediction.cardsPrediction,
-    cardsConfidence: prediction.cardsConfidence,
-    bothTeamsToScore: prediction.bothTeamsToScore,
-    bothTeamsToScoreConfidence: prediction.bothTeamsToScoreConfidence,
-    justification: prediction.justification,
-  };
+    return {
+      mainPrediction: prediction.mainPrediction,
+      mainConfidence: prediction.mainConfidence,
+      goalsPrediction: prediction.goalsPrediction,
+      goalsConfidence: prediction.goalsConfidence,
+      extraTip: prediction.extraTip,
+      extraConfidence: prediction.extraConfidence,
+      cornersPrediction: prediction.cornersPrediction,
+      cornersConfidence: prediction.cornersConfidence,
+      cardsPrediction: prediction.cardsPrediction,
+      cardsConfidence: prediction.cardsConfidence,
+      bothTeamsToScore: prediction.bothTeamsToScore,
+      bothTeamsToScoreConfidence: prediction.bothTeamsToScoreConfidence,
+      justification: prediction.justification,
+    };
+  } catch (error) {
+    console.error('Erro ao gerar palpite com OpenRouter:', error);
+    throw error;
+  }
 }
 
 export async function savePredictionToDatabase(
@@ -209,7 +227,7 @@ export async function generateAllPredictions() {
         }
 
         console.log(`🤖 Gerando palpite para ${match.homeTeam.name} vs ${match.awayTeam.name}...`);
-        const aiPrediction = await generatePredictionWithOpenAI(standings, match);
+        const aiPrediction = await generatePredictionWithAI(standings, match);
 
         await savePredictionToDatabase(match, homeTeam, awayTeam, aiPrediction);
 
