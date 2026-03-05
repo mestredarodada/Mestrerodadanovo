@@ -1,10 +1,12 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { OpenAI } from 'openai';
 import axios from 'axios';
 import { getDb } from '../db';
 import { predictions } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || '',
+});
 
 interface MatchData {
   id: string;
@@ -73,7 +75,7 @@ export async function fetchBrazileiraoData() {
   }
 }
 
-export async function generatePredictionWithGemini(
+export async function generatePredictionWithOpenAI(
   standings: StandingTeam[],
   match: MatchData
 ) {
@@ -82,19 +84,14 @@ export async function generatePredictionWithGemini(
 
   const prompt = `Você é o "Mestre da Rodada", um analista de futebol especializado em palpites para o Brasileirão Série A 2026.\nSua tarefa é analisar o próximo jogo e gerar um palpite bem fundamentado com análises detalhadas.\n\n## DADOS DO JOGO:\n- **Data**: ${new Date(match.utcDate).toLocaleDateString('pt-BR')}\n- **Rodada**: ${match.matchday}\n- **Estádio**: ${match.venue || 'Não informado'}\n\n## TIME DA CASA:\n- **Nome**: ${homeTeam?.team.name || match.homeTeam.name}\n- **Posição**: ${homeTeam?.position}º lugar\n- **Pontos**: ${homeTeam?.points}\n- **Jogos**: ${homeTeam?.playedGames}\n- **Vitórias**: ${homeTeam?.won} | **Empates**: ${homeTeam?.draw} | **Derrotas**: ${homeTeam?.lost}\n- **Gols Pró**: ${homeTeam?.goalsFor} | **Gols Contra**: ${homeTeam?.goalsAgainst} | **Saldo**: ${homeTeam?.goalDifference}\n\n## TIME VISITANTE:\n- **Nome**: ${awayTeam?.team.name || match.awayTeam.name}\n- **Posição**: ${awayTeam?.position}º lugar\n- **Pontos**: ${awayTeam?.points}\n- **Jogos**: ${awayTeam?.playedGames}\n- **Vitórias**: ${awayTeam?.won} | **Empates**: ${awayTeam?.draw} | **Derrotas**: ${awayTeam?.lost}\n- **Gols Pró**: ${awayTeam?.goalsFor} | **Gols Contra**: ${awayTeam?.goalsAgainst} | **Saldo**: ${awayTeam?.goalDifference}\n\n## INSTRUÇÕES:\n1. Analise os dados estatísticos de ambos os times.\n2. Considere o fator mando de campo (time da casa tem vantagem).\n3. Avalie a forma atual (pontos recentes, saldo de gols).\n4. Gere um palpite estruturado com:\n   - **Vencedor Provável**: Qual time tem mais chances de vencer\n   - **Confiança**: Alta/Média/Baixa\n   - **Previsão de Gols**: Over/Under 2.5 gols\n   - **Dica Extra**: Ambas Marcam, Escanteios, Cartões, etc\n   - **Justificativa**: Um parágrafo explicando seu raciocínio\n\nResponda APENAS em JSON válido com a seguinte estrutura exata (sem markdown, sem explicações adicionais):\n{\n  "mainPrediction": "HOME|DRAW|AWAY",\n  "mainConfidence": "HIGH|MEDIUM|LOW",\n  "goalsPrediction": "OVER_2_5|UNDER_2_5",\n  "goalsConfidence": "HIGH|MEDIUM|LOW",\n  "extraTip": "Descrição da dica (ex: Ambas Marcam SIM, Over 9 Escanteios)",\n  "extraConfidence": "HIGH|MEDIUM|LOW",\n  "cornersPrediction": "OVER_9|UNDER_9",\n  "cornersConfidence": "HIGH|MEDIUM|LOW",\n  "cardsPrediction": "OVER_4_5|UNDER_4_5",\n  "cardsConfidence": "HIGH|MEDIUM|LOW",\n  "bothTeamsToScore": "YES|NO",\n  "bothTeamsToScoreConfidence": "HIGH|MEDIUM|LOW",\n  "justification": "Parágrafo explicativo detalhado"\n}`;
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: prompt }],
+    response_format: { type: 'json_object' },
+  });
 
-  const result = await model.generateContent(prompt);
-  const responseText =
-    result.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-  // Extrair JSON da resposta
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Não foi possível extrair o JSON da resposta do Gemini');
-  }
-
-  const prediction = JSON.parse(jsonMatch[0]);
+  const responseText = response.choices[0].message.content || '{}';
+  const prediction = JSON.parse(responseText);
 
   return {
     mainPrediction: prediction.mainPrediction,
@@ -117,7 +114,7 @@ export async function savePredictionToDatabase(
   match: MatchData,
   homeTeam: StandingTeam,
   awayTeam: StandingTeam,
-  geminiPrediction: any
+  aiPrediction: any
 ) {
   const database = getDb();
   
@@ -159,19 +156,19 @@ export async function savePredictionToDatabase(
     awayTeamGoalsFor: awayTeam.goalsFor,
     awayTeamGoalsAgainst: awayTeam.goalsAgainst,
     awayTeamGoalDifference: awayTeam.goalDifference,
-    mainPrediction: geminiPrediction.mainPrediction || 'DRAW',
-    mainConfidence: geminiPrediction.mainConfidence || 'MEDIUM',
-    goalsPrediction: geminiPrediction.goalsPrediction || 'UNDER_2_5',
-    goalsConfidence: geminiPrediction.goalsConfidence || 'MEDIUM',
-    extraTip: geminiPrediction.extraTip || 'Análise em processamento',
-    extraConfidence: geminiPrediction.extraConfidence || 'MEDIUM',
-    cornersPrediction: geminiPrediction.cornersPrediction || null,
-    cornersConfidence: geminiPrediction.cornersConfidence || null,
-    cardsPrediction: geminiPrediction.cardsPrediction || null,
-    cardsConfidence: geminiPrediction.cardsConfidence || null,
-    bothTeamsToScore: geminiPrediction.bothTeamsToScore || null,
-    bothTeamsToScoreConfidence: geminiPrediction.bothTeamsToScoreConfidence || null,
-    justification: geminiPrediction.justification || 'Justificativa não gerada.',
+    mainPrediction: aiPrediction.mainPrediction || 'DRAW',
+    mainConfidence: aiPrediction.mainConfidence || 'MEDIUM',
+    goalsPrediction: aiPrediction.goalsPrediction || 'UNDER_2_5',
+    goalsConfidence: aiPrediction.goalsConfidence || 'MEDIUM',
+    extraTip: aiPrediction.extraTip || 'Análise em processamento',
+    extraConfidence: aiPrediction.extraConfidence || 'MEDIUM',
+    cornersPrediction: aiPrediction.cornersPrediction || null,
+    cornersConfidence: aiPrediction.cornersConfidence || null,
+    cardsPrediction: aiPrediction.cardsPrediction || null,
+    cardsConfidence: aiPrediction.cardsConfidence || null,
+    bothTeamsToScore: aiPrediction.bothTeamsToScore || null,
+    bothTeamsToScoreConfidence: aiPrediction.bothTeamsToScoreConfidence || null,
+    justification: aiPrediction.justification || 'Justificativa não gerada.',
   };
 
   if (existing.length > 0) {
@@ -210,9 +207,9 @@ export async function generateAllPredictions() {
         }
 
         console.log(`🤖 Gerando palpite para ${match.homeTeam.name} vs ${match.awayTeam.name}...`);
-        const geminiPrediction = await generatePredictionWithGemini(standings, match);
+        const aiPrediction = await generatePredictionWithOpenAI(standings, match);
 
-        await savePredictionToDatabase(match, homeTeam, awayTeam, geminiPrediction);
+        await savePredictionToDatabase(match, homeTeam, awayTeam, aiPrediction);
 
         console.log(`✅ Palpite salvo para ${match.homeTeam.name} vs ${match.awayTeam.name}`);
       } catch (error) {
