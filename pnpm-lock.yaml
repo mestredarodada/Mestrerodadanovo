@@ -204,7 +204,7 @@ importers:
         specifier: ^3.3.5
         version: 3.9.0(react@19.2.4)
       zod:
-        specifier: ^3.23.8
+        specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
       '@builder.io/vite-plugin-jsx-loc':
