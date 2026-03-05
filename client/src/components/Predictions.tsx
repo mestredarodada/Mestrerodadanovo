@@ -30,7 +30,21 @@ export default function Predictions() {
     );
   }
 
-  if (error || !predictions || predictions.length === 0) {
+  if (error) {
+    return (
+      <motion.div
+        className="bg-card rounded-2xl border border-border p-12 text-center"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <AlertCircle size={48} className="mx-auto text-destructive mb-4" />
+        <p className="text-foreground font-bold">Erro ao carregar palpites.</p>
+        <p className="text-sm text-muted-foreground mt-2">Por favor, tente novamente mais tarde.</p>
+      </motion.div>
+    );
+  }
+
+  if (!predictions || predictions.length === 0) {
     return (
       <motion.div
         className="bg-card rounded-2xl border border-border p-12 text-center"
@@ -39,7 +53,7 @@ export default function Predictions() {
       >
         <AlertCircle size={48} className="mx-auto text-muted-foreground mb-4" />
         <p className="text-muted-foreground">Nenhum palpite disponível no momento.</p>
-        <p className="text-sm text-muted-foreground mt-2">Os palpites serão gerados quando houver jogos agendados.</p>
+        <p className="text-sm text-muted-foreground mt-2">Os palpites serão gerados quando houver jogos agendados e publicados pelo Mestre.</p>
       </motion.div>
     );
   }

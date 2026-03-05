@@ -46,8 +46,9 @@ router.get('/:matchId', async (req, res) => {
 // GET /api/predictions/generate/all - Gerar palpites para todos os jogos agendados
 router.post('/generate/all', async (req, res) => {
   try {
+    console.log('--- INICIANDO GERAÇÃO DE PALPITES VIA API REST ---');
     await generateAllPredictions();
-    res.json({ message: 'Palpites gerados com sucesso' });
+    res.json({ success: true, message: 'Palpites gerados com sucesso' });
   } catch (error) {
     console.error('Erro ao gerar palpites:', error);
     res.status(500).json({ error: 'Erro ao gerar palpites' });

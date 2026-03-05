@@ -39,18 +39,23 @@ export default function Admin() {
 
   const handleGeneratePredictions = async () => {
     setIsLoading(true);
+    setMessage(null);
     try {
+      console.log('Solicitando geração de palpites...');
       const result = await admin.generateNewPredictions();
-      setMessage({ type: 'success', text: result.message });
-      // Aguardar um pouco e recarregar os palpites
-      setTimeout(() => loadPredictions(), 1000);
+      console.log('Resultado da geração:', result);
+      setMessage({ type: 'success', text: result.message || 'Palpites gerados com sucesso!' });
+      // Recarregar os palpites após a geração
+      await loadPredictions();
     } catch (error) {
+      console.error('Erro ao gerar palpites:', error);
       setMessage({ 
         type: 'error', 
-        text: error instanceof Error ? error.message : 'Erro ao gerar palpites' 
+        text: error instanceof Error ? error.message : 'Erro ao gerar palpites. Verifique os logs do servidor.' 
       });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handlePublish = async (id: number) => {
