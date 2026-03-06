@@ -13,9 +13,9 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'llama-3.3-70b-versatile';
 
 interface MatchData {
-  id: string;
-  homeTeam: { id: string; name: string; shortName: string; crest: string };
-  awayTeam: { id: string; name: string; shortName: string; crest: string };
+  id: number;
+  homeTeam: { id: number; name: string; shortName: string; crest: string };
+  awayTeam: { id: number; name: string; shortName: string; crest: string };
   utcDate: string;
   matchday: number;
   venue: string;
@@ -24,7 +24,7 @@ interface MatchData {
 
 interface StandingTeam {
   position: number;
-  team: { id: string; name: string; shortName: string; crest: string };
+  team: { id: number; name: string; shortName: string; crest: string };
   points: number;
   playedGames: number;
   won: number;
@@ -46,7 +46,6 @@ export async function fetchBrazileiraoData() {
       }
     );
 
-    // Buscar jogos exatamente como o site faz
     const matchesResponse = await axios.get(
       'https://api.football-data.org/v4/competitions/BSA/matches',
       {
@@ -57,16 +56,12 @@ export async function fetchBrazileiraoData() {
     );
 
     const allMatches = matchesResponse.data.matches || [];
-    
-    // Filtrar jogos que estão SCHEDULED ou TIMED (exatamente o que o site mostra como próximos)
     let matches = allMatches.filter((m: any) => m.status === 'SCHEDULED' || m.status === 'TIMED');
 
-    // Se não houver jogos futuros (ex: fim de temporada), pegar os últimos 10 para ter o que analisar
     if (matches.length === 0) {
       console.log('⚠️ Nenhum jogo futuro encontrado. Pegando últimos jogos para análise...');
       matches = allMatches.slice(-10);
     } else {
-      // Pegar apenas os próximos 10 jogos para não sobrecarregar a API
       matches = matches.slice(0, 10);
     }
 
@@ -143,7 +138,7 @@ Responda APENAS em JSON válido com a seguinte estrutura exata (sem markdown, se
 }`;
 
   try {
-    console.log(`🤖 Chamando Groq (Llama 3.3 70B) para ${homeTeam?.team.name} vs ${awayTeam?.team.name}...`);
+    console.log(`🤖 Chamando Groq (Llama 3.3 70B) para ${homeTeam?.team.name || match.homeTeam.name} vs ${awayTeam?.team.name || match.awayTeam.name}...`);
     const response = await axios.post(
       GROQ_URL,
       {
@@ -163,32 +158,27 @@ Responda APENAS em JSON válido com a seguinte estrutura exata (sem markdown, se
 
     console.log('✅ Resposta recebida do Groq');
     const responseText = response.data.choices[0].message.content || '{}';
-    console.log(`📄 Resposta da IA (primeiros 200 caracteres): ${responseText.substring(0, 200)}`);
     
-    // Limpar markdown se a IA retornar
     const cleanedJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const prediction = JSON.parse(cleanedJson);
 
     return {
-      mainPrediction: prediction.mainPrediction,
-      mainConfidence: prediction.mainConfidence,
-      goalsPrediction: prediction.goalsPrediction,
-      goalsConfidence: prediction.goalsConfidence,
-      extraTip: prediction.extraTip,
-      extraConfidence: prediction.extraConfidence,
-      cornersPrediction: prediction.cornersPrediction,
-      cornersConfidence: prediction.cornersConfidence,
-      cardsPrediction: prediction.cardsPrediction,
-      cardsConfidence: prediction.cardsConfidence,
-      bothTeamsToScore: prediction.bothTeamsToScore,
-      bothTeamsToScoreConfidence: prediction.bothTeamsToScoreConfidence,
-      justification: prediction.justification,
+      mainPrediction: prediction.mainPrediction || 'DRAW',
+      mainConfidence: prediction.mainConfidence || 'LOW',
+      goalsPrediction: prediction.goalsPrediction || 'UNDER_2_5',
+      goalsConfidence: prediction.goalsConfidence || 'LOW',
+      extraTip: prediction.extraTip || 'Análise em andamento',
+      extraConfidence: prediction.extraConfidence || 'LOW',
+      cornersPrediction: prediction.cornersPrediction || 'UNDER_9',
+      cornersConfidence: prediction.cornersConfidence || 'LOW',
+      cardsPrediction: prediction.cardsPrediction || 'UNDER_4_5',
+      cardsConfidence: prediction.cardsConfidence || 'LOW',
+      bothTeamsToScore: prediction.bothTeamsToScore || 'NO',
+      bothTeamsToScoreConfidence: prediction.bothTeamsToScoreConfidence || 'LOW',
+      justification: prediction.justification || 'Justificativa não gerada.',
     };
   } catch (error) {
     console.error('❌ Erro ao gerar palpite com Groq:', error instanceof Error ? error.message : error);
-    if (error instanceof Error && error.message.includes('401')) {
-      console.error('❌ Erro de autenticacao: Verifique a chave da API do Groq');
-    }
     throw error;
   }
 }
@@ -203,20 +193,47 @@ export async function savePredictionToDatabase(
   
   console.log(`💾 Verificando existência de palpite para jogo ID: ${match.id}`);
   
-  // Verificar se já existe uma previsão para este jogo
   const existing = await database
     .select()
     .from(predictions)
     .where(eq(predictions.matchId, String(match.id)))
     .limit(1);
 
-  const predictionData = {
+  const predictionData: any = {
     matchId: String(match.id),
-    homeTeamName: homeTeam.team.name,
-    awayTeamName: awayTeam.team.name,
-    homeTeamCrest: homeTeam.team.crest,
-    awayTeamCrest: awayTeam.team.crest,
+    homeTeamId: String(match.homeTeam.id),
+    homeTeamName: homeTeam.team.name || match.homeTeam.name,
+    homeTeamCrest: homeTeam.team.crest || match.homeTeam.crest,
+    awayTeamId: String(match.awayTeam.id),
+    awayTeamName: awayTeam.team.name || match.awayTeam.name,
+    awayTeamCrest: awayTeam.team.crest || match.awayTeam.crest,
     matchDate: new Date(match.utcDate),
+    matchday: String(match.matchday || 0),
+    venue: match.venue || 'Não informado',
+    
+    // Estatísticas Casa
+    homeTeamPosition: String(homeTeam.position || 0),
+    homeTeamPoints: String(homeTeam.points || 0),
+    homeTeamPlayedGames: String(homeTeam.playedGames || 0),
+    homeTeamWon: String(homeTeam.won || 0),
+    homeTeamDraw: String(homeTeam.draw || 0),
+    homeTeamLost: String(homeTeam.lost || 0),
+    homeTeamGoalsFor: String(homeTeam.goalsFor || 0),
+    homeTeamGoalsAgainst: String(homeTeam.goalsAgainst || 0),
+    homeTeamGoalDifference: String(homeTeam.goalDifference || 0),
+    
+    // Estatísticas Visitante
+    awayTeamPosition: String(awayTeam.position || 0),
+    awayTeamPoints: String(awayTeam.points || 0),
+    awayTeamPlayedGames: String(awayTeam.playedGames || 0),
+    awayTeamWon: String(awayTeam.won || 0),
+    awayTeamDraw: String(awayTeam.draw || 0),
+    awayTeamLost: String(awayTeam.lost || 0),
+    awayTeamGoalsFor: String(awayTeam.goalsFor || 0),
+    awayTeamGoalsAgainst: String(awayTeam.goalsAgainst || 0),
+    awayTeamGoalDifference: String(awayTeam.goalDifference || 0),
+
+    // Palpites
     mainPrediction: aiPrediction.mainPrediction,
     mainConfidence: aiPrediction.mainConfidence,
     goalsPrediction: aiPrediction.goalsPrediction,
@@ -231,14 +248,13 @@ export async function savePredictionToDatabase(
     bothTeamsToScoreConfidence: aiPrediction.bothTeamsToScoreConfidence,
     justification: aiPrediction.justification,
     isPublished: false,
-    publishedAt: null,
   };
 
   if (existing.length === 0) {
-    console.log(`➕ Inserindo novo palpite para ${homeTeam.team.name} vs ${awayTeam.team.name}`);
+    console.log(`➕ Inserindo novo palpite para ${predictionData.homeTeamName} vs ${predictionData.awayTeamName}`);
     await database.insert(predictions).values(predictionData);
   } else {
-    console.log(`🔄 Atualizando palpite existente para ${homeTeam.team.name} vs ${awayTeam.team.name}`);
+    console.log(`🔄 Atualizando palpite existente para ${predictionData.homeTeamName} vs ${predictionData.awayTeamName}`);
     await database
       .update(predictions)
       .set(predictionData)
@@ -250,7 +266,6 @@ export async function generateAllPredictions() {
   console.log('🚀 Iniciando geração de palpites...');
 
   try {
-    console.log('📡 Buscando dados do Brasileirão...');
     const { standings, matches } = await fetchBrazileiraoData();
     console.log(`✅ Dados recebidos: ${matches.length} jogos, ${standings.length} times`);
 
@@ -259,7 +274,6 @@ export async function generateAllPredictions() {
       return { generated: 0, errors: 0 };
     }
 
-    console.log(`📊 ${matches.length} jogos encontrados. Gerando palpites...`);
     let generated = 0;
     let errors = 0;
 
@@ -274,16 +288,12 @@ export async function generateAllPredictions() {
           continue;
         }
 
-        console.log(`🤖 Gerando palpite para ${match.homeTeam.name} vs ${match.awayTeam.name}...`);
         const aiPrediction = await generatePredictionWithAI(standings, match);
-        console.log(`✅ IA retornou palpite para ${match.homeTeam.name}`);
-
         await savePredictionToDatabase(match, homeTeam, awayTeam, aiPrediction);
         generated++;
 
-        console.log(`✅ Palpite salvo para ${match.homeTeam.name} vs ${match.awayTeam.name}`);
+        console.log(`✅ Palpite salvo: ${match.homeTeam.name} vs ${match.awayTeam.name}`);
 
-        // Enviar para o Telegram
         try {
           await sendPredictionToTelegram({
             homeTeamName: homeTeam.team.name,
@@ -298,20 +308,19 @@ export async function generateAllPredictions() {
             justification: aiPrediction.justification,
             matchDate: new Date(match.utcDate),
           });
-          console.log(`📤 Palpite enviado para o Telegram: ${match.homeTeam.name} vs ${match.awayTeam.name}`);
         } catch (telegramError) {
-          console.error(`❌ Erro ao enviar para o Telegram (${match.homeTeam.name} vs ${match.awayTeam.name}):`, telegramError);
+          console.error(`❌ Erro Telegram:`, telegramError);
         }
       } catch (error) {
-        console.error(`❌ Erro ao processar jogo ${match.homeTeam.name} vs ${match.awayTeam.name}:`, error instanceof Error ? error.message : error);
+        console.error(`❌ Erro no jogo ${match.homeTeam.name}:`, error instanceof Error ? error.message : error);
         errors++;
       }
     }
 
-    console.log(`✨ Geração de palpites concluída! Gerados: ${generated}, Erros: ${errors}`);
+    console.log(`✨ Concluído! Gerados: ${generated}, Erros: ${errors}`);
     return { generated, errors };
   } catch (error) {
-    console.error('❌ Erro durante a geração de palpites:', error instanceof Error ? error.message : error);
+    console.error('❌ Erro geral:', error instanceof Error ? error.message : error);
     throw error;
   }
 }
