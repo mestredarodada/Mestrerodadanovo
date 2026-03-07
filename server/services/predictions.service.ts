@@ -396,8 +396,7 @@ Placar mais provável: *${ai.likelyScore || 'N/D'}*
 ${ai.justification || 'N/D'}
 
 ━━━━━━━━━━━━━━━━━━━━
-🔗 [Faça sua aposta aqui](https://1wrlst.com/?open=register&p=c2f3)
-📱 [Ver todos os palpites](https://mestredarodada.onrender.com)`;
+🔗 [Faça sua aposta aqui](https://1wrlst.com/?open=register&p=c2f3)`;
 
   try {
     await axios.post(
