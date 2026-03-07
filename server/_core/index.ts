@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import axios from "axios";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
@@ -11,33 +12,54 @@ import { runMigrations } from "../db/migrate";
 import { generateNextPrediction } from "../services/predictions.service";
 
 // ─── Job de geração sequencial de palpites ────────────────────────────────────
-// Gera 1 palpite a cada 5 minutos, respeitando o rate limit da API gratuita.
+// Gera 1 palpite a cada 10 minutos, respeitando o rate limit da API gratuita.
 // Pula automaticamente jogos que já têm palpite recente (menos de 20h).
 
-const PREDICTION_JOB_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
+const PREDICTION_JOB_INTERVAL_MS = 10 * 60 * 1000; // 10 minutos
 
 function startPredictionJob() {
   if (!process.env.GROQ_API_KEY || !process.env.FOOTBALL_DATA_API_KEY) {
-    console.warn('[PredictionJob] Variáveis de ambiente não configuradas (GROQ_API_KEY ou FOOTBALL_DATA_API_KEY). Job desativado.');
+    console.warn('[PredictionJob] Variáveis de ambiente não configuradas. Job desativado.');
     return;
   }
 
-  console.log('[PredictionJob] ✅ Job iniciado — gerará 1 palpite a cada 2 minutos.');
+  console.log('[PredictionJob] ✅ Job iniciado — gerará 1 palpite a cada 10 minutos.');
 
-  // Executa imediatamente ao iniciar o servidor (após 10s para o servidor estabilizar)
+  // Executa imediatamente ao iniciar o servidor (após 15s para estabilizar)
   setTimeout(async () => {
-    console.log('[PredictionJob] 🚀 Primeira execução após inicialização do servidor...');
+    console.log('[PredictionJob] 🚀 Primeira execução após inicialização...');
     await generateNextPrediction().catch(err =>
       console.error('[PredictionJob] Erro na primeira execução:', err.message)
     );
-  }, 10 * 1000);
+  }, 15 * 1000);
 
-  // Depois executa a cada 2 minutos
+  // Executa a cada 10 minutos — nunca bloqueia, erro é apenas logado
   setInterval(async () => {
     await generateNextPrediction().catch(err =>
       console.error('[PredictionJob] Erro no job:', err.message)
     );
   }, PREDICTION_JOB_INTERVAL_MS);
+}
+
+// ─── Keep-alive: evita hibernação do Render no plano gratuito ─────────────────
+// O Render hiberna serviços gratuitos após ~15 min de inatividade.
+// Este loop faz uma requisição ao próprio servidor a cada 4 minutos,
+// mantendo-o acordado e garantindo que o job de palpites continue rodando.
+
+function startKeepAlive(port: number) {
+  const SERVICE_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${port}`;
+  const KEEP_ALIVE_INTERVAL_MS = 4 * 60 * 1000; // 4 minutos
+
+  console.log(`[KeepAlive] ✅ Iniciado — ping a cada 4 min em ${SERVICE_URL}/health`);
+
+  setInterval(async () => {
+    try {
+      await axios.get(`${SERVICE_URL}/health`, { timeout: 10000 });
+      console.log('[KeepAlive] 💓 Ping OK — servidor acordado');
+    } catch (err: any) {
+      console.warn('[KeepAlive] ⚠️ Ping falhou:', err.message);
+    }
+  }, KEEP_ALIVE_INTERVAL_MS);
 }
 
 // ─── Servidor ─────────────────────────────────────────────────────────────────
@@ -71,6 +93,11 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+  // Endpoint de health check — usado pelo keep-alive e pelo Render
+  app.get("/health", (_req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   // tRPC API (football data + predictions)
   app.use(
     "/api/trpc",
@@ -101,6 +128,9 @@ async function startServer() {
 
     // 2. Inicia o job de geração sequencial de palpites
     startPredictionJob();
+
+    // 3. Inicia o keep-alive para evitar hibernação do Render
+    startKeepAlive(port);
   });
 }
 
