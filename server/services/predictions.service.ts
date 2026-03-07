@@ -7,7 +7,7 @@ import { fetchLatestFootballNews } from './news.service';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 if (!GROQ_API_KEY) {
-  throw new Error('GROQ_API_KEY environment variable is not set');
+  console.warn('[predictions.service] GROQ_API_KEY não configurada. Geração de palpites desabilitada.');
 }
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'llama-3.3-70b-versatile';
@@ -221,7 +221,7 @@ export async function savePredictionToDatabase(
     bothTeamsToScore: aiPrediction.bothTeamsToScore,
     bothTeamsToScoreConfidence: aiPrediction.bothTeamsToScoreConfidence,
     justification: aiPrediction.justification,
-    isPublished: false,
+    isPublished: true,  // Publicado automaticamente ao gerar
   };
 
   if (existing.length === 0) {
@@ -238,6 +238,11 @@ export async function savePredictionToDatabase(
 
 export async function generateAllPredictions() {
   console.log('🚀 Iniciando geração de palpites...');
+
+  if (!GROQ_API_KEY) {
+    console.error('❌ GROQ_API_KEY não configurada. Impossível gerar palpites.');
+    throw new Error('GROQ_API_KEY não configurada no servidor. Configure a variável de ambiente no Render.');
+  }
 
   try {
     const { standings, matches } = await fetchBrazileiraoData();
@@ -277,13 +282,16 @@ export async function generateAllPredictions() {
             goalsPrediction: aiPrediction.goalsPrediction,
             goalsConfidence: aiPrediction.goalsConfidence,
             cornersPrediction: aiPrediction.cornersPrediction || undefined,
+            cornersConfidence: aiPrediction.cornersConfidence || undefined,
             cardsPrediction: aiPrediction.cardsPrediction || undefined,
+            cardsConfidence: aiPrediction.cardsConfidence || undefined,
             bothTeamsToScore: aiPrediction.bothTeamsToScore || undefined,
+            bothTeamsToScoreConfidence: aiPrediction.bothTeamsToScoreConfidence || undefined,
             justification: aiPrediction.justification,
             matchDate: new Date(match.utcDate),
           });
         } catch (telegramError) {
-          console.error(`❌ Erro Telegram:`, telegramError);
+          console.warn(`⚠️ Telegram não configurado ou erro:`, telegramError instanceof Error ? telegramError.message : telegramError);
         }
       } catch (error) {
         console.error(`❌ Erro no jogo ${match.homeTeam.name}:`, error instanceof Error ? error.message : error);

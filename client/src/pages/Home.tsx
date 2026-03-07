@@ -77,12 +77,12 @@ function QuickStats({ onTabChange }: { onTabChange: (tab: string) => void }) {
     {
       icon: Star,
       label: 'Palpites do Mestre',
-      value: 'Em Breve',
+      value: 'Ver Palpites',
       sub: 'Análise com IA',
       color: 'from-purple-500 to-purple-600',
       iconBg: 'bg-purple-100 dark:bg-purple-900/40',
       iconColor: 'text-purple-600 dark:text-purple-400',
-      tab: 'standings',
+      tab: 'predictions',
       isMascote: true,
     },
   ];

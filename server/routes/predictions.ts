@@ -1,19 +1,19 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { predictions } from '../db/schema';
+import { predictionsSimple } from '../db/schema';
 import { desc, eq } from 'drizzle-orm';
 import { generateAllPredictions } from '../services/predictions.service';
 
 const router = Router();
 
-// GET /api/predictions - Buscar todos os palpites
+// GET /api/predictions - Buscar todos os palpites publicados
 router.get('/', async (req, res) => {
   try {
     const allPredictions = await db
       .select()
-      .from(predictions)
-      .where(eq(predictions.isPublished, true))
-      .orderBy(desc(predictions.matchDate));
+      .from(predictionsSimple)
+      .where(eq(predictionsSimple.isPublished, true))
+      .orderBy(desc(predictionsSimple.matchDate));
 
     res.json(allPredictions);
   } catch (error) {
@@ -28,8 +28,8 @@ router.get('/:matchId', async (req, res) => {
     const { matchId } = req.params;
     const prediction = await db
       .select()
-      .from(predictions)
-      .where(eq(predictions.matchId, matchId))
+      .from(predictionsSimple)
+      .where(eq(predictionsSimple.matchId, matchId))
       .limit(1);
 
     if (prediction.length === 0) {

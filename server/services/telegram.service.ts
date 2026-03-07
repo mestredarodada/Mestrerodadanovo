@@ -11,37 +11,26 @@ interface TelegramMessage {
   goalsPrediction: string;
   goalsConfidence: string;
   cornersPrediction?: string;
+  cornersConfidence?: string;
   cardsPrediction?: string;
+  cardsConfidence?: string;
   bothTeamsToScore?: string;
+  bothTeamsToScoreConfidence?: string;
   justification: string;
   matchDate: Date;
 }
 
 export async function sendPredictionToTelegram(prediction: TelegramMessage): Promise<boolean> {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-    console.warn('Telegram credentials not configured');
+    console.warn('Telegram credentials not configured — skipping Telegram notification');
     return false;
   }
 
   try {
-    const confidenceEmoji = {
+    const confidenceEmoji: Record<string, string> = {
       'HIGH': '🟢',
       'MEDIUM': '🟡',
       'LOW': '🔴',
-    };
-
-    const predictionEmoji = {
-      'HOME': '🏠',
-      'DRAW': '🤝',
-      'AWAY': '✈️',
-	      'OVER_2_5': '⬆️',
-	      'UNDER_2_5': '⬇️',
-      'YES': '✅',
-      'NO': '❌',
-	      'OVER_9': '⬆️',
-	      'UNDER_9': '⬇️',
-	      'OVER_4_5': '⬆️',
-	      'UNDER_4_5': '⬇️',
     };
 
     const matchDateFormatted = new Date(prediction.matchDate).toLocaleString('pt-BR', {
@@ -53,13 +42,32 @@ export async function sendPredictionToTelegram(prediction: TelegramMessage): Pro
     });
 
     const escapeMarkdown = (text: string) => {
-      return text.replace(/_/g, '\\_').replace(/\*/g, '\\*').replace(/\[/g, '\\[')
-                 .replace(/\]/g, '\\]').replace(/\(/g, '\\(').replace(/\)/g, '\\)')
-                 .replace(/~/g, '\\~').replace(/`/g, '\\`').replace(/>/g, '\\>')
-                 .replace(/#/g, '\\#').replace(/\+/g, '\\+').replace(/-/g, '\\-')
-                 .replace(/=/g, '\\=').replace(/\|/g, '\\|').replace(/{/g, '\\{')
-                 .replace(/}/g, '\\}').replace(/\./g, '\\.').replace(/!/g, '\\!');
+      return text
+        .replace(/_/g, '\\_').replace(/\*/g, '\\*').replace(/\[/g, '\\[')
+        .replace(/\]/g, '\\]').replace(/\(/g, '\\(').replace(/\)/g, '\\)')
+        .replace(/~/g, '\\~').replace(/`/g, '\\`').replace(/>/g, '\\>')
+        .replace(/#/g, '\\#').replace(/\+/g, '\\+').replace(/-/g, '\\-')
+        .replace(/=/g, '\\=').replace(/\|/g, '\\|').replace(/{/g, '\\{')
+        .replace(/}/g, '\\}').replace(/\./g, '\\.').replace(/!/g, '\\!');
     };
+
+    const vencedor = prediction.mainPrediction === 'HOME'
+      ? prediction.homeTeamName
+      : prediction.mainPrediction === 'AWAY'
+        ? prediction.awayTeamName
+        : 'Empate';
+
+    const cornersSection = prediction.cornersPrediction
+      ? `🚩 *ESCANTEIOS*\n${confidenceEmoji[prediction.cornersConfidence || ''] || '⭐'} ${escapeMarkdown(prediction.cornersPrediction)} (${prediction.cornersConfidence || 'N/A'})\n\n`
+      : '';
+
+    const cardsSection = prediction.cardsPrediction
+      ? `🟨 *CARTÕES*\n${confidenceEmoji[prediction.cardsConfidence || ''] || '⭐'} ${escapeMarkdown(prediction.cardsPrediction)} (${prediction.cardsConfidence || 'N/A'})\n\n`
+      : '';
+
+    const btsSection = prediction.bothTeamsToScore
+      ? `🎯 *AMBAS MARCAM*\n${confidenceEmoji[prediction.bothTeamsToScoreConfidence || ''] || '⭐'} ${escapeMarkdown(prediction.bothTeamsToScore)} (${prediction.bothTeamsToScoreConfidence || 'N/A'})\n\n`
+      : '';
 
     const message = `
 🏆 *PALPITE DO MESTRE DA RODADA* 🏆
@@ -69,16 +77,18 @@ export async function sendPredictionToTelegram(prediction: TelegramMessage): Pro
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 *VENCEDOR*
-${confidenceEmoji[prediction.mainConfidence as keyof typeof confidenceEmoji] || '⭐'} ${escapeMarkdown(prediction.mainPrediction === 'HOME' ? prediction.homeTeamName : prediction.mainPrediction === 'AWAY' ? prediction.awayTeamName : 'Empate')} (${prediction.mainConfidence})
+${confidenceEmoji[prediction.mainConfidence] || '⭐'} ${escapeMarkdown(vencedor)} (${prediction.mainConfidence})
 
 ⚽ *GOLS*
-${confidenceEmoji[prediction.goalsConfidence as keyof typeof confidenceEmoji] || '⭐'} ${escapeMarkdown(prediction.goalsPrediction)} (${prediction.goalsConfidence})
-${prediction.cornersPrediction ? `🚩 *ESCANTEIOS*\n${confidenceEmoji[prediction.cornersConfidence as keyof typeof confidenceEmoji] || '⭐'} ${escapeMarkdown(prediction.cornersPrediction)} (${prediction.cornersConfidence})\n\n` : ''}${prediction.cardsPrediction ? `🟨 *CARTÕES*\n${confidenceEmoji[prediction.cardsConfidence as keyof typeof confidenceEmoji] || '⭐'} ${escapeMarkdown(prediction.cardsPrediction)} (${prediction.cardsConfidence})\n\n`: ''}${prediction.bothTeamsToScore ? `🎯 *AMBAS MARCAM*\n${confidenceEmoji[prediction.bothTeamsToScoreConfidence as keyof typeof confidenceEmoji] || '⭐'} ${escapeMarkdown(prediction.bothTeamsToScore)} (${prediction.bothTeamsToScoreConfidence})\n\n` : ''}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${confidenceEmoji[prediction.goalsConfidence] || '⭐'} ${escapeMarkdown(prediction.goalsPrediction)} (${prediction.goalsConfidence})
 
-📝 *ANÁLISE*\n${escapeMarkdown(prediction.justification)}
+${cornersSection}${cardsSection}${btsSection}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 *ANÁLISE*
+${escapeMarkdown(prediction.justification)}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 Boa sorte com seus palpites! 🍀
-    `;
+    `.trim();
 
     const response = await axios.post(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,

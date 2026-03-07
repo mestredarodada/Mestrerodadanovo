@@ -79,20 +79,27 @@ export const adminRouter = router({
           })
           .where(eq(predictionsSimple.id, input.predictionId));
 
-        // Enviar para Telegram
-        await sendPredictionToTelegram({
-          homeTeamName: pred.homeTeamName,
-          awayTeamName: pred.awayTeamName,
-          mainPrediction: pred.mainPrediction,
-          mainConfidence: pred.mainConfidence,
-          goalsPrediction: pred.goalsPrediction,
-          goalsConfidence: pred.goalsConfidence,
-          cornersPrediction: pred.cornersPrediction || undefined,
-          cardsPrediction: pred.cardsPrediction || undefined,
-          bothTeamsToScore: pred.bothTeamsToScore || undefined,
-          justification: pred.justification,
-          matchDate: pred.matchDate,
-        });
+        // Enviar para Telegram (não bloqueia se falhar)
+        try {
+          await sendPredictionToTelegram({
+            homeTeamName: pred.homeTeamName,
+            awayTeamName: pred.awayTeamName,
+            mainPrediction: pred.mainPrediction,
+            mainConfidence: pred.mainConfidence,
+            goalsPrediction: pred.goalsPrediction,
+            goalsConfidence: pred.goalsConfidence,
+            cornersPrediction: pred.cornersPrediction || undefined,
+            cornersConfidence: pred.cornersConfidence || undefined,
+            cardsPrediction: pred.cardsPrediction || undefined,
+            cardsConfidence: pred.cardsConfidence || undefined,
+            bothTeamsToScore: pred.bothTeamsToScore || undefined,
+            bothTeamsToScoreConfidence: pred.bothTeamsToScoreConfidence || undefined,
+            justification: pred.justification,
+            matchDate: pred.matchDate,
+          });
+        } catch (telegramErr) {
+          console.warn('Telegram não configurado ou erro ao enviar:', telegramErr);
+        }
 
         return { success: true };
       } catch (error) {
