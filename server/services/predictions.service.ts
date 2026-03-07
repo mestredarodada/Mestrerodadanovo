@@ -444,10 +444,11 @@ async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'>
     homeTeamCrest: match.homeTeam.crest || null,
     awayTeamCrest: match.awayTeam.crest || null,
     matchDate: new Date(match.utcDate),
-    mainPrediction: ai.mainPrediction,
-    mainConfidence: ai.mainConfidence,
-    goalsPrediction: ai.goalsPrediction,
-    goalsConfidence: ai.goalsConfidence,
+    // Campos obrigatórios — usa valor padrão se a IA não retornar
+    mainPrediction: ai.mainPrediction || 'DRAW',
+    mainConfidence: ai.mainConfidence || 'MEDIUM',
+    goalsPrediction: ai.goalsPrediction || 'OVER_2_5',
+    goalsConfidence: ai.goalsConfidence || 'MEDIUM',
     bothTeamsToScore: ai.bothTeamsToScore || null,
     bothTeamsToScoreConfidence: ai.bothTeamsToScoreConfidence || null,
     cornersPrediction: ai.cornersPrediction || null,
@@ -456,7 +457,7 @@ async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'>
     cardsConfidence: ai.cardsConfidence || null,
     extraTip: ai.bestBet || null,
     extraConfidence: ai.bestBetConfidence || null,
-    justification: ai.justification || '',
+    justification: ai.justification || 'Análise gerada automaticamente.',
     isPublished: true,
   };
 
