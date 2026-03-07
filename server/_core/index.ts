@@ -8,6 +8,39 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import apiRouter from "../routes/predictions";
 import { runMigrations } from "../db/migrate";
+import { generateNextPrediction } from "../services/predictions.service";
+
+// ─── Job de geração sequencial de palpites ────────────────────────────────────
+// Gera 1 palpite a cada 2 minutos, respeitando o rate limit da API gratuita.
+// Pula automaticamente jogos que já têm palpite recente (menos de 20h).
+
+const PREDICTION_JOB_INTERVAL_MS = 2 * 60 * 1000; // 2 minutos
+
+function startPredictionJob() {
+  if (!process.env.GROQ_API_KEY || !process.env.FOOTBALL_DATA_API_KEY) {
+    console.warn('[PredictionJob] Variáveis de ambiente não configuradas (GROQ_API_KEY ou FOOTBALL_DATA_API_KEY). Job desativado.');
+    return;
+  }
+
+  console.log('[PredictionJob] ✅ Job iniciado — gerará 1 palpite a cada 2 minutos.');
+
+  // Executa imediatamente ao iniciar o servidor (após 10s para o servidor estabilizar)
+  setTimeout(async () => {
+    console.log('[PredictionJob] 🚀 Primeira execução após inicialização do servidor...');
+    await generateNextPrediction().catch(err =>
+      console.error('[PredictionJob] Erro na primeira execução:', err.message)
+    );
+  }, 10 * 1000);
+
+  // Depois executa a cada 2 minutos
+  setInterval(async () => {
+    await generateNextPrediction().catch(err =>
+      console.error('[PredictionJob] Erro no job:', err.message)
+    );
+  }, PREDICTION_JOB_INTERVAL_MS);
+}
+
+// ─── Servidor ─────────────────────────────────────────────────────────────────
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -29,7 +62,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  // Executa migrações automáticas antes de iniciar
+  // 1. Executa migrações automáticas (cria tabelas se não existirem)
   await runMigrations();
 
   const app = express();
@@ -65,6 +98,9 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+
+    // 2. Inicia o job de geração sequencial de palpites
+    startPredictionJob();
   });
 }
 
