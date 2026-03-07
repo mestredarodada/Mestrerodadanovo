@@ -1,24 +1,10 @@
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { adminRouter } from "./routes/admin";
 import axios from "axios";
 import { z } from "zod";
 
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
-  auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
-    }),
-  }),
 
   football: router({
     standings: publicProcedure.query(async () => {
@@ -45,9 +31,7 @@ export const appRouter = router({
           const response = await axios.get(
             'https://api.football-data.org/v4/competitions/BSA/matches',
             {
-              params: {
-                status: input.status,
-              },
+              params: { status: input.status },
               headers: {
                 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY,
               },
@@ -65,18 +49,17 @@ export const appRouter = router({
         const { getDb } = await import('./db');
         const { predictionsSimple } = await import('./db/schema');
         const { desc, eq } = await import('drizzle-orm');
-        
+
         const database = getDb();
-        
-        // Buscar apenas os palpites publicados
+
         const publishedPredictions = await database
           .select()
           .from(predictionsSimple)
           .where(eq(predictionsSimple.isPublished, true))
           .orderBy(desc(predictionsSimple.matchDate));
-        
-        console.log(`[PREDICTIONS] Retornando ${publishedPredictions.length} palpites publicados`);
-        
+
+        console.log(`[PREDICTIONS] Retornando ${publishedPredictions.length} palpites`);
+
         return publishedPredictions;
       } catch (error) {
         console.error('Erro ao carregar palpites:', error);
@@ -84,7 +67,6 @@ export const appRouter = router({
       }
     }),
   }),
-  admin: adminRouter,
 });
 
 export type AppRouter = typeof appRouter;

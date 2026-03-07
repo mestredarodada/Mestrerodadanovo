@@ -1,37 +1,342 @@
-import { motion } from 'framer-motion';
-import { Trophy, TrendingUp, AlertCircle, Zap, RefreshCw } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Sparkles,
+  Shield,
+  TrendingUp,
+  Target,
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+  AlertCircle,
+  Clock,
+  CheckCircle2,
+  Minus,
+} from 'lucide-react';
+import { useState } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-// Mapeamento de labels de confiança
-const confidenceLabel = (c?: string | null) => {
-  if (c === 'HIGH') return { label: 'ALTA', cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' };
-  if (c === 'MEDIUM') return { label: 'MÉDIA', cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400' };
-  return { label: 'BAIXA', cls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' };
-};
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const confidenceIcon = (c?: string | null) => {
-  if (c === 'HIGH') return '🟢';
-  if (c === 'MEDIUM') return '🟡';
-  return '🔴';
-};
+function confidenceBadge(confidence: string | null | undefined) {
+  if (!confidence) return null;
+  const map: Record<string, { label: string; cls: string }> = {
+    HIGH: { label: 'Alta', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
+    MEDIUM: { label: 'Média', cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' },
+    LOW: { label: 'Baixa', cls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+  };
+  const info = map[confidence] || { label: confidence, cls: 'bg-muted text-muted-foreground' };
+  return (
+    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${info.cls}`}>
+      {info.label}
+    </span>
+  );
+}
+
+function mainPredictionInfo(pred: string | null | undefined) {
+  if (!pred) return { label: 'N/A', Icon: Minus, bg: 'from-slate-400 to-slate-500' };
+  const map: Record<string, any> = {
+    HOME: { label: 'Vitória Casa', Icon: CheckCircle2, bg: 'from-emerald-500 to-emerald-600' },
+    DRAW: { label: 'Empate', Icon: Minus, bg: 'from-yellow-500 to-yellow-600' },
+    AWAY: { label: 'Vitória Visitante', Icon: TrendingUp, bg: 'from-blue-500 to-blue-600' },
+  };
+  return map[pred] || { label: pred, Icon: Target, bg: 'from-slate-400 to-slate-500' };
+}
+
+function goalsLabel(pred: string | null | undefined) {
+  if (!pred) return null;
+  return pred === 'OVER_2_5' ? 'Mais de 2.5 gols' : 'Menos de 2.5 gols';
+}
+function btsLabel(pred: string | null | undefined) {
+  if (!pred) return null;
+  return pred === 'YES' ? 'Ambas marcam: Sim' : 'Ambas marcam: Não';
+}
+function cornersLabel(pred: string | null | undefined) {
+  if (!pred) return null;
+  return pred === 'OVER_9' ? 'Mais de 9 escanteios' : 'Menos de 9 escanteios';
+}
+function cardsLabel(pred: string | null | undefined) {
+  if (!pred) return null;
+  return pred === 'OVER_4_5' ? 'Mais de 4.5 cartões' : 'Menos de 4.5 cartões';
+}
+function confColor(c: string | null | undefined) {
+  if (c === 'HIGH') return 'text-emerald-600 dark:text-emerald-400';
+  if (c === 'MEDIUM') return 'text-yellow-600 dark:text-yellow-400';
+  return 'text-red-500 dark:text-red-400';
+}
+function confLabel(c: string | null | undefined) {
+  if (c === 'HIGH') return 'Alta';
+  if (c === 'MEDIUM') return 'Média';
+  return 'Baixa';
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function PredictionSkeleton() {
+  return (
+    <div className="animate-pulse rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+      <div className="h-1.5 bg-gradient-to-r from-purple-400 to-pink-400" />
+      <div className="p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="h-4 bg-muted rounded w-1/3" />
+          <div className="h-4 bg-muted rounded w-1/4" />
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 space-y-2 flex flex-col items-center">
+            <div className="w-14 h-14 bg-muted rounded-full" />
+            <div className="h-3 bg-muted rounded w-3/4" />
+          </div>
+          <div className="w-16 h-16 bg-muted rounded-2xl" />
+          <div className="flex-1 space-y-2 flex flex-col items-center">
+            <div className="w-14 h-14 bg-muted rounded-full" />
+            <div className="h-3 bg-muted rounded w-3/4" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="h-14 bg-muted rounded-xl" />
+          <div className="h-14 bg-muted rounded-xl" />
+          <div className="h-14 bg-muted rounded-xl" />
+          <div className="h-14 bg-muted rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Prediction Card ──────────────────────────────────────────────────────────
+
+function PredictionCard({ prediction, index }: { prediction: any; index: number }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const mainPred = mainPredictionInfo(prediction.mainPrediction);
+  const { Icon: MainIcon } = mainPred;
+
+  let matchDate = '';
+  try {
+    matchDate = prediction.matchDate
+      ? format(new Date(prediction.matchDate), "dd 'de' MMM 'às' HH:mm", { locale: ptBR })
+      : '';
+  } catch {
+    matchDate = '';
+  }
+
+  const tips = [
+    goalsLabel(prediction.goalsPrediction) && {
+      label: goalsLabel(prediction.goalsPrediction)!,
+      confidence: prediction.goalsConfidence,
+      icon: Target,
+    },
+    btsLabel(prediction.bothTeamsToScore) && {
+      label: btsLabel(prediction.bothTeamsToScore)!,
+      confidence: prediction.bothTeamsToScoreConfidence,
+      icon: Zap,
+    },
+    cornersLabel(prediction.cornersPrediction) && {
+      label: cornersLabel(prediction.cornersPrediction)!,
+      confidence: prediction.cornersConfidence,
+      icon: TrendingUp,
+    },
+    cardsLabel(prediction.cardsPrediction) && {
+      label: cardsLabel(prediction.cardsPrediction)!,
+      confidence: prediction.cardsConfidence,
+      icon: Shield,
+    },
+  ].filter(Boolean) as Array<{ label: string; confidence: string | null; icon: any }>;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.06, duration: 0.4 }}
+      className="group rounded-2xl border border-border bg-card shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden"
+    >
+      {/* Barra colorida no topo */}
+      <div className={`h-1.5 bg-gradient-to-r ${mainPred.bg}`} />
+
+      <div className="p-5">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          {matchDate && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock size={12} />
+              <span>{matchDate}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-full px-2.5 py-1">
+            <Sparkles size={10} className="text-purple-500" />
+            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">IA Groq</span>
+          </div>
+        </div>
+
+        {/* Times + Palpite Principal */}
+        <div className="flex items-center justify-between gap-3 mb-5">
+          {/* Casa */}
+          <div className="flex-1 flex flex-col items-center gap-2 text-center">
+            {prediction.homeTeamCrest ? (
+              <img
+                src={prediction.homeTeamCrest}
+                alt={prediction.homeTeamName}
+                className="w-14 h-14 object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+                <Shield size={22} className="text-muted-foreground" />
+              </div>
+            )}
+            <p className="font-poppins font-bold text-xs text-foreground leading-tight max-w-[80px]">
+              {prediction.homeTeamName}
+            </p>
+            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-medium">Casa</span>
+          </div>
+
+          {/* Palpite central */}
+          <div className="flex flex-col items-center gap-2 shrink-0">
+            <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${mainPred.bg} flex items-center justify-center shadow-lg`}>
+              <MainIcon size={22} className="text-white" />
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] font-black text-foreground leading-tight whitespace-nowrap">
+                {mainPred.label}
+              </p>
+              {confidenceBadge(prediction.mainConfidence)}
+            </div>
+          </div>
+
+          {/* Visitante */}
+          <div className="flex-1 flex flex-col items-center gap-2 text-center">
+            {prediction.awayTeamCrest ? (
+              <img
+                src={prediction.awayTeamCrest}
+                alt={prediction.awayTeamName}
+                className="w-14 h-14 object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+                <Shield size={22} className="text-muted-foreground" />
+              </div>
+            )}
+            <p className="font-poppins font-bold text-xs text-foreground leading-tight max-w-[80px]">
+              {prediction.awayTeamName}
+            </p>
+            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-medium">Fora</span>
+          </div>
+        </div>
+
+        {/* Grid de dicas */}
+        {tips.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {tips.map((tip, i) => {
+              const TipIcon = tip.icon;
+              return (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl px-3 py-2.5 border border-border/60"
+                >
+                  <TipIcon size={13} className="text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold text-foreground leading-tight truncate">{tip.label}</p>
+                    {tip.confidence && (
+                      <p className={`text-[9px] font-bold mt-0.5 ${confColor(tip.confidence)}`}>
+                        Confiança {confLabel(tip.confidence)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Dica extra */}
+        {prediction.extraTip && (
+          <div className="flex items-start gap-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/50 rounded-xl px-3 py-2.5 mb-4">
+            <Zap size={13} className="text-orange-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[10px] font-bold text-orange-700 dark:text-orange-400 mb-0.5">Dica Extra</p>
+              <p className="text-[11px] text-orange-800 dark:text-orange-300 leading-snug">{prediction.extraTip}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Análise expansível */}
+        {prediction.justification && (
+          <div>
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5 border-t border-border/60 mt-1"
+            >
+              <span className="font-semibold">Análise do Mestre</span>
+              {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+            <AnimatePresence>
+              {expanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="overflow-hidden"
+                >
+                  <p className="text-xs text-muted-foreground leading-relaxed pt-2 pb-1">
+                    {prediction.justification}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+function EmptyState() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center justify-center py-20 text-center"
+    >
+      <div className="relative mb-6">
+        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-950/40 dark:to-pink-950/40 flex items-center justify-center">
+          <Sparkles size={40} className="text-purple-400" />
+        </div>
+        <div className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center shadow-lg">
+          <Clock size={14} className="text-white" />
+        </div>
+      </div>
+      <h3 className="font-poppins font-black text-xl text-foreground mb-2">
+        Palpites em Breve
+      </h3>
+      <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+        O Mestre está analisando os próximos jogos do Brasileirão. Os palpites são gerados automaticamente antes de cada rodada.
+      </p>
+      <div className="mt-6 flex items-center gap-2 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-full px-4 py-2">
+        <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+        <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">IA processando dados...</span>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Predictions() {
-  const { data: predictions, isLoading, error, refetch } = trpc.football.predictions.useQuery();
+  const { data: predictions, isLoading, error, refetch, isFetching } = trpc.football.predictions.useQuery(
+    undefined,
+    { retry: 2, staleTime: 5 * 60 * 1000 }
+  );
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <motion.div
-            key={i}
-            className="bg-card rounded-2xl border border-border p-6 animate-pulse"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-          >
-            <div className="h-40 bg-muted rounded-lg" />
-          </motion.div>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => <PredictionSkeleton key={i} />)}
       </div>
     );
   }
@@ -39,223 +344,73 @@ export default function Predictions() {
   if (error) {
     return (
       <motion.div
-        className="bg-card rounded-2xl border border-border p-12 text-center"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex flex-col items-center gap-4 py-16 text-center"
       >
-        <AlertCircle size={48} className="mx-auto text-destructive mb-4" />
-        <p className="text-foreground font-bold">Erro ao carregar palpites.</p>
-        <p className="text-sm text-muted-foreground mt-2">Por favor, tente novamente mais tarde.</p>
+        <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center">
+          <AlertCircle size={28} className="text-red-500" />
+        </div>
+        <div>
+          <p className="font-semibold text-foreground mb-1">Erro ao carregar palpites</p>
+          <p className="text-sm text-muted-foreground">{error.message}</p>
+        </div>
         <button
           onClick={() => refetch()}
-          className="mt-4 flex items-center gap-2 mx-auto text-sm text-primary hover:underline"
+          disabled={isFetching}
+          className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          <RefreshCw size={14} /> Tentar novamente
+          <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
+          Tentar novamente
         </button>
       </motion.div>
     );
   }
 
   if (!predictions || !Array.isArray(predictions) || predictions.length === 0) {
-    return (
-      <motion.div
-        className="bg-card rounded-2xl border border-border p-12 text-center"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <AlertCircle size={48} className="mx-auto text-muted-foreground mb-4" />
-        <p className="text-muted-foreground font-semibold">Nenhum palpite disponível no momento.</p>
-        <p className="text-sm text-muted-foreground mt-2">
-          Os palpites são gerados automaticamente antes de cada rodada. Volte em breve!
-        </p>
-      </motion.div>
-    );
+    return <EmptyState />;
   }
 
   return (
-    <div className="space-y-4">
-      {predictions.map((prediction, index) => {
-        const { label: mainConfLabel, cls: mainConfCls } = confidenceLabel(prediction.mainConfidence);
+    <div>
+      {/* Contador */}
+      <div className="flex items-center justify-between mb-5">
+        <span className="text-sm font-semibold text-muted-foreground">
+          {predictions.length} palpite{predictions.length !== 1 ? 's' : ''} disponível{predictions.length !== 1 ? 'is' : ''}
+        </span>
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+        >
+          <RefreshCw size={12} className={isFetching ? 'animate-spin' : ''} />
+          Atualizar
+        </button>
+      </div>
 
-        return (
-          <motion.div
-            key={prediction.matchId}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
-          >
-            {/* Header do Card — Times */}
-            <div className="bg-gradient-to-r from-blue-600/10 to-orange-600/10 p-4 border-b border-border">
-              <div className="flex items-center justify-between">
-                {/* Time da Casa */}
-                <div className="flex items-center gap-3 flex-1">
-                  {prediction.homeTeamCrest ? (
-                    <img
-                      src={prediction.homeTeamCrest}
-                      alt={prediction.homeTeamName}
-                      className="w-10 h-10 object-contain"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  ) : (
-                    <Trophy size={20} className="text-muted-foreground" />
-                  )}
-                  <div>
-                    <p className="font-poppins font-bold text-sm">{prediction.homeTeamName}</p>
-                    <p className="text-xs text-muted-foreground">Casa</p>
-                  </div>
-                </div>
+      {/* Grid de cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <AnimatePresence>
+          {predictions.map((prediction: any, index: number) => (
+            <PredictionCard
+              key={prediction.id ?? prediction.matchId ?? index}
+              prediction={prediction}
+              index={index}
+            />
+          ))}
+        </AnimatePresence>
+      </div>
 
-                {/* Data e Hora */}
-                <div className="text-center px-2">
-                  <p className="text-xs font-semibold text-muted-foreground">
-                    {new Date(prediction.matchDate).toLocaleDateString('pt-BR', {
-                      day: '2-digit',
-                      month: '2-digit',
-                    })}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(prediction.matchDate).toLocaleTimeString('pt-BR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
-                </div>
-
-                {/* Time Visitante */}
-                <div className="flex items-center gap-3 flex-1 justify-end">
-                  <div className="text-right">
-                    <p className="font-poppins font-bold text-sm">{prediction.awayTeamName}</p>
-                    <p className="text-xs text-muted-foreground">Visitante</p>
-                  </div>
-                  {prediction.awayTeamCrest ? (
-                    <img
-                      src={prediction.awayTeamCrest}
-                      alt={prediction.awayTeamName}
-                      className="w-10 h-10 object-contain"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  ) : (
-                    <Trophy size={20} className="text-muted-foreground" />
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Palpites */}
-            <div className="p-4 space-y-4">
-
-              {/* Vencedor Provável */}
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Trophy size={18} className="text-blue-600 dark:text-blue-400" />
-                    <p className="font-semibold text-sm">Vencedor Provável</p>
-                  </div>
-                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${mainConfCls}`}>
-                    {mainConfLabel}
-                  </span>
-                </div>
-                <p className="font-poppins font-black text-lg">
-                  {prediction.mainPrediction === 'HOME'
-                    ? prediction.homeTeamName
-                    : prediction.mainPrediction === 'AWAY'
-                      ? prediction.awayTeamName
-                      : 'Empate'}
-                </p>
-              </div>
-
-              {/* Grid de Análises */}
-              <div className="grid grid-cols-2 gap-3">
-
-                {/* Gols */}
-                <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
-                  <p className="text-xs text-muted-foreground mb-1">⚽ Gols</p>
-                  <p className="font-bold text-sm">
-                    {prediction.goalsPrediction === 'OVER_2_5' ? 'Over 2.5' : 'Under 2.5'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {confidenceIcon(prediction.goalsConfidence)}{' '}
-                    {confidenceLabel(prediction.goalsConfidence).label}
-                  </p>
-                </div>
-
-                {/* Ambas Marcam */}
-                {prediction.bothTeamsToScore && (
-                  <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
-                    <p className="text-xs text-muted-foreground mb-1">🎯 Ambas Marcam</p>
-                    <p className="font-bold text-sm">
-                      {prediction.bothTeamsToScore === 'YES' ? 'SIM' : 'NÃO'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {confidenceIcon(prediction.bothTeamsToScoreConfidence)}{' '}
-                      {confidenceLabel(prediction.bothTeamsToScoreConfidence).label}
-                    </p>
-                  </div>
-                )}
-
-                {/* Escanteios */}
-                {prediction.cornersPrediction && (
-                  <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-3 border border-orange-200 dark:border-orange-800">
-                    <p className="text-xs text-muted-foreground mb-1">🚩 Escanteios</p>
-                    <p className="font-bold text-sm">
-                      {prediction.cornersPrediction === 'OVER_9' ? 'Over 9' : 'Under 9'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {confidenceIcon(prediction.cornersConfidence)}{' '}
-                      {confidenceLabel(prediction.cornersConfidence).label}
-                    </p>
-                  </div>
-                )}
-
-                {/* Cartões */}
-                {prediction.cardsPrediction && (
-                  <div className="bg-red-50 dark:bg-red-950/30 rounded-lg p-3 border border-red-200 dark:border-red-800">
-                    <p className="text-xs text-muted-foreground mb-1">🟨 Cartões</p>
-                    <p className="font-bold text-sm">
-                      {prediction.cardsPrediction === 'OVER_4_5' ? 'Over 4.5' : 'Under 4.5'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {confidenceIcon(prediction.cardsConfidence)}{' '}
-                      {confidenceLabel(prediction.cardsConfidence).label}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Dica Extra */}
-              {prediction.extraTip && (
-                <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-950/30 dark:to-indigo-900/30 rounded-lg p-3 border border-indigo-200 dark:border-indigo-800">
-                  <div className="flex items-start gap-2">
-                    <Zap size={16} className="text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-1">Dica Extra</p>
-                      <p className="text-sm font-medium">{prediction.extraTip}</p>
-                      {prediction.extraConfidence && (
-                        <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
-                          Confiança: {confidenceLabel(prediction.extraConfidence).label}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Justificativa */}
-              {prediction.justification && (
-                <div className="bg-slate-50 dark:bg-slate-900/30 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
-                  <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                    <TrendingUp size={14} />
-                    Análise do Mestre
-                  </p>
-                  <p className="text-sm leading-relaxed text-foreground">{prediction.justification}</p>
-                </div>
-              )}
-
-            </div>
-          </motion.div>
-        );
-      })}
+      {/* Footer */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="mt-8 flex items-center justify-center gap-2 text-xs text-muted-foreground"
+      >
+        <Sparkles size={12} className="text-purple-400" />
+        <span>Palpites gerados por IA com base em dados reais do Brasileirão</span>
+      </motion.div>
     </div>
   );
 }

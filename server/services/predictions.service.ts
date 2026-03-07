@@ -1,242 +1,128 @@
 import axios from 'axios';
-import { getDb } from '../db';
-import { predictions, predictionsSimple } from '../db/schema';
+import { db } from '../db';
+import { predictionsSimple } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { sendPredictionToTelegram } from './telegram.service';
-import { fetchLatestFootballNews } from './news.service';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 if (!GROQ_API_KEY) {
   console.warn('[predictions.service] GROQ_API_KEY não configurada. Geração de palpites desabilitada.');
 }
+
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'llama-3.3-70b-versatile';
 
-interface MatchData {
-  id: number;
-  homeTeam: { id: number; name: string; shortName: string; crest: string };
-  awayTeam: { id: number; name: string; shortName: string; crest: string };
-  utcDate: string;
-  matchday: number;
-  venue: string;
-  status: string;
+// ─── Buscar dados do Brasileirão ──────────────────────────────────────────────
+async function fetchBrazileiraoData() {
+  const FOOTBALL_API_KEY = process.env.FOOTBALL_DATA_API_KEY || '';
+  const headers = { 'X-Auth-Token': FOOTBALL_API_KEY };
+
+  const [standingsRes, matchesRes] = await Promise.all([
+    axios.get('https://api.football-data.org/v4/competitions/BSA/standings', { headers }),
+    axios.get('https://api.football-data.org/v4/competitions/BSA/matches?status=SCHEDULED', { headers }),
+  ]);
+
+  const standings = standingsRes.data.standings[0]?.table || [];
+  const matches = matchesRes.data.matches || [];
+
+  return { standings, matches };
 }
 
-interface StandingTeam {
-  position: number;
-  team: { id: number; name: string; shortName: string; crest: string };
-  points: number;
-  playedGames: number;
-  won: number;
-  draw: number;
-  lost: number;
-  goalsFor: number;
-  goalsAgainst: number;
-  goalDifference: number;
-}
+// ─── Gerar palpite via Groq ───────────────────────────────────────────────────
+async function generatePredictionWithAI(matchInfo: string): Promise<any> {
+  const systemPrompt = `Você é o Mestre da Rodada, um especialista em análise de futebol brasileiro com décadas de experiência no Brasileirão Série A. Você analisa dados estatísticos e fornece palpites precisos e fundamentados.
 
-export async function fetchBrazileiraoData() {
-  try {
-    const standingsResponse = await axios.get(
-      'https://api.football-data.org/v4/competitions/BSA/standings',
-      {
-        headers: {
-          'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY,
-        },
-      }
-    );
-
-    const matchesResponse = await axios.get(
-      'https://api.football-data.org/v4/competitions/BSA/matches',
-      {
-        headers: {
-          'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY,
-        },
-      }
-    );
-
-    const allMatches = matchesResponse.data.matches || [];
-    let matches = allMatches.filter((m: any) => m.status === 'SCHEDULED' || m.status === 'TIMED');
-
-    if (matches.length === 0) {
-      console.log('⚠️ Nenhum jogo futuro encontrado. Pegando últimos jogos para análise...');
-      matches = allMatches.slice(-10);
-    } else {
-      matches = matches.slice(0, 10);
-    }
-
-    const standings: StandingTeam[] = standingsResponse.data.standings[0]?.table || [];
-
-    return { standings, matches };
-  } catch (error) {
-    console.error('Erro ao buscar dados do Brasileirão:', error);
-    throw error;
-  }
-}
-
-export async function generatePredictionWithAI(
-  standings: StandingTeam[],
-  match: MatchData
-) {
-  const homeTeam = standings.find((t) => t.team.id === match.homeTeam.id);
-  const awayTeam = standings.find((t) => t.team.id === match.awayTeam.id);
-  const latestNews = await fetchLatestFootballNews();
-
-  const prompt = `Você é o "Mestre da Rodada", um analista de futebol especializado em palpites para o Brasileirão Série A 2026.
-Sua tarefa é analisar o próximo jogo e gerar um palpite bem fundamentado com análises detalhadas.
-
-## NOTÍCIAS RECENTES:
-${latestNews}
-
-## DADOS DO JOGO:
-- **Data**: ${new Date(match.utcDate).toLocaleDateString('pt-BR')}
-- **Rodada**: ${match.matchday}
-- **Estádio**: ${match.venue || 'Não informado'}
-
-## TIME DA CASA:
-- **Nome**: ${homeTeam?.team.name || match.homeTeam.name}
-- **Posição**: ${homeTeam?.position}º lugar
-- **Pontos**: ${homeTeam?.points}
-- **Jogos**: ${homeTeam?.playedGames}
-- **Vitórias**: ${homeTeam?.won} | **Empates**: ${homeTeam?.draw} | **Derrotas**: ${homeTeam?.lost}
-- **Gols Pró**: ${homeTeam?.goalsFor} | **Gols Contra**: ${homeTeam?.goalsAgainst} | **Saldo**: ${homeTeam?.goalDifference}
-
-## TIME VISITANTE:
-- **Nome**: ${awayTeam?.team.name || match.awayTeam.name}
-- **Posição**: ${awayTeam?.position}º lugar
-- **Pontos**: ${awayTeam?.points}
-- **Jogos**: ${awayTeam?.playedGames}
-- **Vitórias**: ${awayTeam?.won} | **Empates**: ${awayTeam?.draw} | **Derrotas**: ${awayTeam?.lost}
-- **Gols Pró**: ${awayTeam?.goalsFor} | **Gols Contra**: ${awayTeam?.goalsAgainst} | **Saldo**: ${awayTeam?.goalDifference}
-
-## INSTRUÇÕES:
-1. Analise os dados estatísticos de ambos os times.
-2. Considere o fator mando de campo (time da casa tem vantagem).
-3. Avalie a forma atual (pontos recentes, saldo de gols).
-4. Gere um palpite estruturado com:
-   - **Vencedor Provável**: Qual time tem mais chances de vencer
-   - **Confiança**: Alta/Média/Baixa
-   - **Previsão de Gols**: Over/Under 2.5 gols
-   - **Dica Extra**: Ambas Marcam, Escanteios, Cartões, etc
-   - **Justificativa**: Um parágrafo explicando seu raciocínio
-
-Responda APENAS em JSON válido com a seguinte estrutura exata (sem markdown, sem explicações adicionais):
+Retorne APENAS um JSON válido, sem texto adicional, com esta estrutura exata:
 {
-  "mainPrediction": "HOME|DRAW|AWAY",
-  "mainConfidence": "HIGH|MEDIUM|LOW",
-  "goalsPrediction": "OVER_2_5|UNDER_2_5",
-  "goalsConfidence": "HIGH|MEDIUM|LOW",
-  "extraTip": "Descrição da dica (ex: Ambas Marcam SIM, Over 9 Escanteios)",
-  "extraConfidence": "HIGH|MEDIUM|LOW",
-  "cornersPrediction": "OVER_9|UNDER_9",
-  "cornersConfidence": "HIGH|MEDIUM|LOW",
-  "cardsPrediction": "OVER_4_5|UNDER_4_5",
-  "cardsConfidence": "HIGH|MEDIUM|LOW",
-  "bothTeamsToScore": "YES|NO",
-  "bothTeamsToScoreConfidence": "HIGH|MEDIUM|LOW",
-  "justification": "Parágrafo explicativo detalhado"
+  "mainPrediction": "HOME" | "DRAW" | "AWAY",
+  "mainConfidence": "HIGH" | "MEDIUM" | "LOW",
+  "goalsPrediction": "OVER_2_5" | "UNDER_2_5",
+  "goalsConfidence": "HIGH" | "MEDIUM" | "LOW",
+  "bothTeamsToScore": "YES" | "NO",
+  "bothTeamsToScoreConfidence": "HIGH" | "MEDIUM" | "LOW",
+  "cornersPrediction": "OVER_9" | "UNDER_9",
+  "cornersConfidence": "HIGH" | "MEDIUM" | "LOW",
+  "cardsPrediction": "OVER_4_5" | "UNDER_4_5",
+  "cardsConfidence": "HIGH" | "MEDIUM" | "LOW",
+  "extraTip": "string com dica extra relevante",
+  "extraConfidence": "HIGH" | "MEDIUM" | "LOW",
+  "justification": "string com análise detalhada em português (mínimo 3 frases)"
 }`;
 
-  try {
-    console.log(`🤖 Chamando Groq (Llama 3.3 70B) para ${homeTeam?.team.name || match.homeTeam.name} vs ${awayTeam?.team.name || match.awayTeam.name}...`);
-    const response = await axios.post(
-      GROQ_URL,
-      {
-        model: MODEL,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 1024,
+  const response = await axios.post(
+    GROQ_URL,
+    {
+      model: MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: matchInfo },
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
       },
-      {
-        headers: {
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 30000,
-      }
-    );
+      timeout: 30000,
+    }
+  );
 
-    console.log('✅ Resposta recebida do Groq');
-    const responseText = response.data.choices[0].message.content || '{}';
-    
-    const cleanedJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    const prediction = JSON.parse(cleanedJson);
+  const content = response.data.choices[0]?.message?.content || '';
 
-    return {
-      mainPrediction: prediction.mainPrediction || 'DRAW',
-      mainConfidence: prediction.mainConfidence || 'LOW',
-      goalsPrediction: prediction.goalsPrediction || 'UNDER_2_5',
-      goalsConfidence: prediction.goalsConfidence || 'LOW',
-      extraTip: prediction.extraTip || 'Análise em andamento',
-      extraConfidence: prediction.extraConfidence || 'LOW',
-      cornersPrediction: prediction.cornersPrediction || 'UNDER_9',
-      cornersConfidence: prediction.cornersConfidence || 'LOW',
-      cardsPrediction: prediction.cardsPrediction || 'UNDER_4_5',
-      cardsConfidence: prediction.cardsConfidence || 'LOW',
-      bothTeamsToScore: prediction.bothTeamsToScore || 'NO',
-      bothTeamsToScoreConfidence: prediction.bothTeamsToScoreConfidence || 'LOW',
-      justification: prediction.justification || 'Justificativa não gerada.',
-    };
-  } catch (error) {
-    console.error('❌ Erro ao gerar palpite com Groq:', error instanceof Error ? error.message : error);
-    throw error;
+  // Extrair JSON da resposta
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('Resposta da IA não contém JSON válido');
   }
+
+  return JSON.parse(jsonMatch[0]);
 }
 
-export async function savePredictionToDatabase(
-  match: MatchData,
-  homeTeam: StandingTeam,
-  awayTeam: StandingTeam,
-  aiPrediction: any
-) {
-  const database = getDb();
-  
-  console.log(`💾 Verificando existência de palpite para jogo ID: ${match.id}`);
-  
-  const existing = await database
-    .select()
-    .from(predictionsSimple)
-    .where(eq(predictionsSimple.matchId, String(match.id)))
-    .limit(1);
-
-  const predictionData: any = {
+// ─── Salvar palpite no banco ──────────────────────────────────────────────────
+async function savePrediction(match: any, aiPrediction: any) {
+  const predictionData = {
     matchId: String(match.id),
-    homeTeamName: homeTeam.team.name || match.homeTeam.name,
-    homeTeamCrest: homeTeam.team.crest || match.homeTeam.crest,
-    awayTeamName: awayTeam.team.name || match.awayTeam.name,
-    awayTeamCrest: awayTeam.team.crest || match.awayTeam.crest,
+    homeTeamName: match.homeTeam.name,
+    awayTeamName: match.awayTeam.name,
+    homeTeamCrest: match.homeTeam.crest || null,
+    awayTeamCrest: match.awayTeam.crest || null,
     matchDate: new Date(match.utcDate),
-    
-    // Palpites
     mainPrediction: aiPrediction.mainPrediction,
     mainConfidence: aiPrediction.mainConfidence,
     goalsPrediction: aiPrediction.goalsPrediction,
     goalsConfidence: aiPrediction.goalsConfidence,
-    extraTip: aiPrediction.extraTip,
-    extraConfidence: aiPrediction.extraConfidence,
-    cornersPrediction: aiPrediction.cornersPrediction,
-    cornersConfidence: aiPrediction.cornersConfidence,
-    cardsPrediction: aiPrediction.cardsPrediction,
-    cardsConfidence: aiPrediction.cardsConfidence,
-    bothTeamsToScore: aiPrediction.bothTeamsToScore,
-    bothTeamsToScoreConfidence: aiPrediction.bothTeamsToScoreConfidence,
+    bothTeamsToScore: aiPrediction.bothTeamsToScore || null,
+    bothTeamsToScoreConfidence: aiPrediction.bothTeamsToScoreConfidence || null,
+    cornersPrediction: aiPrediction.cornersPrediction || null,
+    cornersConfidence: aiPrediction.cornersConfidence || null,
+    cardsPrediction: aiPrediction.cardsPrediction || null,
+    cardsConfidence: aiPrediction.cardsConfidence || null,
+    extraTip: aiPrediction.extraTip || null,
+    extraConfidence: aiPrediction.extraConfidence || null,
     justification: aiPrediction.justification,
-    isPublished: true,  // Publicado automaticamente ao gerar
+    isPublished: true, // Publicado automaticamente sempre
   };
 
+  const existing = await db
+    .select()
+    .from(predictionsSimple)
+    .where(eq(predictionsSimple.matchId, predictionData.matchId));
+
   if (existing.length === 0) {
-    console.log(`➕ Inserindo novo palpite para ${predictionData.homeTeamName} vs ${predictionData.awayTeamName}`);
-    await database.insert(predictionsSimple).values(predictionData);
+    await db.insert(predictionsSimple).values(predictionData);
+    console.log(`✅ Palpite criado: ${predictionData.homeTeamName} vs ${predictionData.awayTeamName}`);
   } else {
-    console.log(`🔄 Atualizando palpite existente para ${predictionData.homeTeamName} vs ${predictionData.awayTeamName}`);
-    await database
+    await db
       .update(predictionsSimple)
-      .set(predictionData)
-      .where(eq(predictionsSimple.matchId, String(match.id)));
+      .set({ ...predictionData, isPublished: true })
+      .where(eq(predictionsSimple.matchId, predictionData.matchId));
+    console.log(`🔄 Palpite atualizado: ${predictionData.homeTeamName} vs ${predictionData.awayTeamName}`);
   }
 }
 
-export async function generateAllPredictions() {
+// ─── Função principal ─────────────────────────────────────────────────────────
+export async function generateAllPredictions(): Promise<{ generated: number; errors: number }> {
   console.log('🚀 Iniciando geração de palpites...');
 
   if (!GROQ_API_KEY) {
@@ -244,65 +130,72 @@ export async function generateAllPredictions() {
     throw new Error('GROQ_API_KEY não configurada no servidor. Configure a variável de ambiente no Render.');
   }
 
+  let generated = 0;
+  let errors = 0;
+
   try {
     const { standings, matches } = await fetchBrazileiraoData();
-    console.log(`✅ Dados recebidos: ${matches.length} jogos, ${standings.length} times`);
+    console.log(`✅ Dados: ${matches.length} jogos agendados, ${standings.length} times`);
 
     if (matches.length === 0) {
-      console.log('❌ Nenhum jogo agendado encontrado.');
+      console.log('ℹ️ Nenhum jogo agendado encontrado.');
       return { generated: 0, errors: 0 };
     }
 
-    let generated = 0;
-    let errors = 0;
+    // Processar no máximo 10 jogos por vez para não estourar o timeout
+    const matchesToProcess = matches.slice(0, 10);
 
-    for (const match of matches) {
+    for (const match of matchesToProcess) {
       try {
-        const homeTeam = standings.find((t) => t.team.id === match.homeTeam.id);
-        const awayTeam = standings.find((t) => t.team.id === match.awayTeam.id);
+        // Verificar se já existe palpite recente (menos de 24h)
+        const existing = await db
+          .select()
+          .from(predictionsSimple)
+          .where(eq(predictionsSimple.matchId, String(match.id)));
 
-        if (!homeTeam || !awayTeam) {
-          console.log(`⚠️  Equipes não encontradas para ${match.homeTeam.name} vs ${match.awayTeam.name}`);
-          errors++;
-          continue;
+        if (existing.length > 0) {
+          const createdAt = new Date(existing[0].createdAt);
+          const hoursSince = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
+          if (hoursSince < 24) {
+            console.log(`⏭️ Palpite recente para ${match.homeTeam.name} vs ${match.awayTeam.name}, pulando...`);
+            continue;
+          }
         }
 
-        const aiPrediction = await generatePredictionWithAI(standings, match);
-        await savePredictionToDatabase(match, homeTeam, awayTeam, aiPrediction);
+        // Buscar dados dos times na classificação
+        const homeTeamData = standings.find((s: any) => s.team.id === match.homeTeam.id);
+        const awayTeamData = standings.find((s: any) => s.team.id === match.awayTeam.id);
+
+        const matchInfo = `
+Jogo: ${match.homeTeam.name} (Casa) vs ${match.awayTeam.name} (Visitante)
+Data: ${new Date(match.utcDate).toLocaleString('pt-BR')}
+Rodada: ${match.matchday || 'N/A'}
+
+${homeTeamData ? `${match.homeTeam.name} - Posição: ${homeTeamData.position}º, Pontos: ${homeTeamData.points}, Jogos: ${homeTeamData.playedGames}, V/E/D: ${homeTeamData.won}/${homeTeamData.draw}/${homeTeamData.lost}, Gols: ${homeTeamData.goalsFor}/${homeTeamData.goalsAgainst}` : `${match.homeTeam.name} - dados não disponíveis`}
+
+${awayTeamData ? `${match.awayTeam.name} - Posição: ${awayTeamData.position}º, Pontos: ${awayTeamData.points}, Jogos: ${awayTeamData.playedGames}, V/E/D: ${awayTeamData.won}/${awayTeamData.draw}/${awayTeamData.lost}, Gols: ${awayTeamData.goalsFor}/${awayTeamData.goalsAgainst}` : `${match.awayTeam.name} - dados não disponíveis`}
+
+Analise este jogo e forneça seus palpites.`;
+
+        console.log(`🔍 Analisando: ${match.homeTeam.name} vs ${match.awayTeam.name}...`);
+        const aiPrediction = await generatePredictionWithAI(matchInfo);
+        await savePrediction(match, aiPrediction);
         generated++;
 
-        console.log(`✅ Palpite salvo: ${match.homeTeam.name} vs ${match.awayTeam.name}`);
+        // Pequena pausa para não sobrecarregar a API
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-        try {
-          await sendPredictionToTelegram({
-            homeTeamName: homeTeam.team.name,
-            awayTeamName: awayTeam.team.name,
-            mainPrediction: aiPrediction.mainPrediction,
-            mainConfidence: aiPrediction.mainConfidence,
-            goalsPrediction: aiPrediction.goalsPrediction,
-            goalsConfidence: aiPrediction.goalsConfidence,
-            cornersPrediction: aiPrediction.cornersPrediction || undefined,
-            cornersConfidence: aiPrediction.cornersConfidence || undefined,
-            cardsPrediction: aiPrediction.cardsPrediction || undefined,
-            cardsConfidence: aiPrediction.cardsConfidence || undefined,
-            bothTeamsToScore: aiPrediction.bothTeamsToScore || undefined,
-            bothTeamsToScoreConfidence: aiPrediction.bothTeamsToScoreConfidence || undefined,
-            justification: aiPrediction.justification,
-            matchDate: new Date(match.utcDate),
-          });
-        } catch (telegramError) {
-          console.warn(`⚠️ Telegram não configurado ou erro:`, telegramError instanceof Error ? telegramError.message : telegramError);
-        }
-      } catch (error) {
-        console.error(`❌ Erro no jogo ${match.homeTeam.name}:`, error instanceof Error ? error.message : error);
+      } catch (matchError) {
+        console.error(`❌ Erro no jogo ${match.homeTeam?.name} vs ${match.awayTeam?.name}:`, matchError instanceof Error ? matchError.message : matchError);
         errors++;
       }
     }
 
-    console.log(`✨ Concluído! Gerados: ${generated}, Erros: ${errors}`);
+    console.log(`✅ Geração concluída: ${generated} palpites gerados, ${errors} erros`);
     return { generated, errors };
+
   } catch (error) {
-    console.error('❌ Erro geral:', error instanceof Error ? error.message : error);
+    console.error('❌ Erro geral na geração:', error);
     throw error;
   }
 }
