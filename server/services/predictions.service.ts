@@ -483,6 +483,7 @@ async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'>
     likely_score: ai.likelyScore ?? null,
     best_bet: ai.bestBet ?? null,
     best_bet_confidence: ai.bestBetConfidence ?? null,
+    matchday: match.matchday ?? null,
   };
 
   const existing = await db

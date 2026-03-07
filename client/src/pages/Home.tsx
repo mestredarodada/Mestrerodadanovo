@@ -8,16 +8,18 @@ import {
   ChevronLeft,
   ChevronRight,
   Activity,
-  Menu,
-  X,
+  Radio,
+  Brain,
 } from 'lucide-react';
 import Standings from '@/components/Standings';
 import UpcomingMatches from '@/components/UpcomingMatches';
 import RecentResults from '@/components/RecentResults';
 import { Predictions } from '@/components/Predictions';
+import { LiveMatches } from '@/components/LiveMatches';
+import { AIResults } from '@/components/AIResults';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
-type Section = 'predictions' | 'standings' | 'upcoming' | 'results';
+type Section = 'predictions' | 'live' | 'ai-results' | 'standings' | 'upcoming' | 'results';
 
 interface NavItem {
   id: Section;
@@ -26,6 +28,7 @@ interface NavItem {
   icon: React.ElementType;
   gradient: string;
   description: string;
+  badge?: string;
 }
 
 // ─── Config de navegação ──────────────────────────────────────────────────────
@@ -37,6 +40,23 @@ const navItems: NavItem[] = [
     icon: Sparkles,
     gradient: 'from-purple-600 to-pink-600',
     description: 'Análises com IA para os próximos jogos',
+  },
+  {
+    id: 'live',
+    label: 'Ao Vivo',
+    shortLabel: 'Ao Vivo',
+    icon: Radio,
+    gradient: 'from-red-600 to-red-700',
+    description: 'Jogos do Brasileirão em andamento',
+    badge: 'LIVE',
+  },
+  {
+    id: 'ai-results',
+    label: 'Resultados da IA',
+    shortLabel: 'Result. IA',
+    icon: Brain,
+    gradient: 'from-violet-600 to-indigo-600',
+    description: 'O que a IA acertou nos jogos finalizados',
   },
   {
     id: 'standings',
@@ -127,10 +147,17 @@ function Sidebar({
                   : 'text-slate-400 hover:text-white hover:bg-white/10'
                 }`}
             >
-              <Icon
-                size={20}
-                className={`shrink-0 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}
-              />
+              <div className="relative shrink-0">
+                <Icon
+                  size={20}
+                  className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}
+                />
+                {item.badge && !isActive && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-black px-1 rounded-full leading-tight animate-pulse">
+                    {item.badge}
+                  </span>
+                )}
+              </div>
               <AnimatePresence>
                 {!collapsed && (
                   <motion.div
@@ -138,7 +165,7 @@ function Sidebar({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -8 }}
                     transition={{ duration: 0.15 }}
-                    className="overflow-hidden text-left"
+                    className="overflow-hidden text-left flex-1"
                   >
                     <p className="text-sm font-semibold leading-tight whitespace-nowrap">
                       {item.label}
@@ -191,23 +218,29 @@ function Sidebar({
 
 // ─── Mobile Bottom Nav ────────────────────────────────────────────────────────
 function MobileNav({ active, onSelect }: { active: Section; onSelect: (s: Section) => void }) {
+  // No mobile, mostra apenas as 5 abas principais (as mais importantes)
+  const mobileItems = navItems.slice(0, 5);
+
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0f172a]/95 backdrop-blur-xl border-t border-white/10 safe-area-bottom">
-      <div className="flex items-center justify-around px-2 py-2">
-        {navItems.map((item) => {
+      <div className="flex items-center justify-around px-1 py-2">
+        {mobileItems.map((item) => {
           const isActive = active === item.id;
           const Icon = item.icon;
           return (
             <button
               key={item.id}
               onClick={() => onSelect(item.id)}
-              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200
+              className={`flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl transition-all duration-200
                 ${isActive ? 'text-white' : 'text-slate-500'}`}
             >
-              <div className={`p-1.5 rounded-lg transition-all duration-200 ${isActive ? 'bg-gradient-to-br ' + item.gradient + ' shadow-lg' : ''}`}>
-                <Icon size={18} />
+              <div className={`relative p-1.5 rounded-lg transition-all duration-200 ${isActive ? 'bg-gradient-to-br ' + item.gradient + ' shadow-lg' : ''}`}>
+                <Icon size={17} />
+                {item.badge && !isActive && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                )}
               </div>
-              <span className="text-[10px] font-semibold leading-none">{item.shortLabel}</span>
+              <span className="text-[9px] font-semibold leading-none">{item.shortLabel}</span>
             </button>
           );
         })}
@@ -237,6 +270,11 @@ function SectionHeader({ item }: { item: NavItem }) {
           </h2>
           <p className="text-sm text-muted-foreground">{item.description}</p>
         </div>
+        {item.badge && (
+          <span className="ml-2 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
+            {item.badge}
+          </span>
+        )}
       </div>
     </motion.div>
   );
@@ -283,9 +321,9 @@ function HeroBanner({ onSelect }: { onSelect: (s: Section) => void }) {
           transition={{ delay: 0.4 }}
           className="flex items-center gap-2"
         >
-          <div className="flex items-center gap-2 bg-purple-600/80 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-            <Sparkles size={12} />
-            Ver Palpites do Mestre
+          <div className="flex items-center gap-2 bg-purple-600/80 backdrop-blur-sm border border-purple-400/30 rounded-full px-3 py-1.5">
+            <Sparkles size={12} className="text-white" />
+            <span className="text-white text-xs font-bold">Ver Palpites do Mestre</span>
           </div>
         </motion.div>
       </div>
@@ -305,27 +343,27 @@ function QuickStats({ onSelect }: { onSelect: (s: Section) => void }) {
       mascote: true,
     },
     {
+      id: 'live' as Section,
+      icon: Radio,
+      label: 'Ao Vivo',
+      gradient: 'from-red-600 to-red-700',
+      description: 'Jogos agora',
+      mascote: false,
+    },
+    {
+      id: 'ai-results' as Section,
+      icon: Brain,
+      label: 'Result. da IA',
+      gradient: 'from-violet-600 to-indigo-600',
+      description: 'Acertos do Mestre',
+      mascote: false,
+    },
+    {
       id: 'standings' as Section,
       icon: BarChart3,
       label: 'Classificação',
       gradient: 'from-blue-600 to-blue-700',
       description: 'Tabela atualizada',
-      mascote: false,
-    },
-    {
-      id: 'upcoming' as Section,
-      icon: Calendar,
-      label: 'Próximos Jogos',
-      gradient: 'from-orange-500 to-orange-600',
-      description: 'Jogos agendados',
-      mascote: false,
-    },
-    {
-      id: 'results' as Section,
-      icon: Activity,
-      label: 'Resultados',
-      gradient: 'from-emerald-500 to-emerald-600',
-      description: 'Últimos placares',
       mascote: false,
     },
   ];
@@ -374,13 +412,11 @@ function QuickStats({ onSelect }: { onSelect: (s: Section) => void }) {
 export default function Home() {
   const [activeSection, setActiveSection] = useState<Section>('predictions');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const currentNav = navItems.find((n) => n.id === activeSection)!;
 
   const handleSelect = (section: Section) => {
     setActiveSection(section);
-    setMobileMenuOpen(false);
   };
 
   return (
@@ -444,10 +480,31 @@ export default function Home() {
                 exit={{ opacity: 0, y: -16 }}
                 transition={{ duration: 0.3 }}
               >
-                {/* Hero apenas na aba de palpites */}
                 <HeroBanner onSelect={handleSelect} />
                 <SectionHeader item={currentNav} />
                 <Predictions />
+              </motion.div>
+            ) : activeSection === 'live' ? (
+              <motion.div
+                key="live"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.3 }}
+              >
+                <SectionHeader item={currentNav} />
+                <LiveMatches />
+              </motion.div>
+            ) : activeSection === 'ai-results' ? (
+              <motion.div
+                key="ai-results"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.3 }}
+              >
+                <SectionHeader item={currentNav} />
+                <AIResults />
               </motion.div>
             ) : activeSection === 'standings' ? (
               <motion.div
@@ -457,7 +514,6 @@ export default function Home() {
                 exit={{ opacity: 0, y: -16 }}
                 transition={{ duration: 0.3 }}
               >
-                {/* Quick stats apenas na classificação */}
                 <QuickStats onSelect={handleSelect} />
                 <SectionHeader item={currentNav} />
                 <Standings />

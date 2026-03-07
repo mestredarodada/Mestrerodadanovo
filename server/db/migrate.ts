@@ -67,6 +67,7 @@ export async function runMigrations() {
       { name: 'likely_score', type: 'VARCHAR(20)' },
       { name: 'best_bet', type: 'TEXT' },
       { name: 'best_bet_confidence', type: 'VARCHAR(20)' },
+      { name: 'matchday', type: 'INTEGER' },
     ];
 
     for (const col of newColumns) {

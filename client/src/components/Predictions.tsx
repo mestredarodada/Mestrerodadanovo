@@ -134,7 +134,7 @@ function PredictionCard({ prediction }: { prediction: any }) {
             {dateStr}
           </span>
           <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            Brasileirão
+            {prediction.matchday ? `Rodada ${prediction.matchday}` : 'Brasileirão'}
           </span>
         </div>
 
