@@ -7,6 +7,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import apiRouter from "../routes/predictions"; // Importar as rotas da API de palpites
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -42,6 +43,8 @@ async function startServer() {
       createContext,
     })
   );
+  // API REST Routes (DEVE estar ANTES do catch-all)
+  app.use("/api/predictions", apiRouter);
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
