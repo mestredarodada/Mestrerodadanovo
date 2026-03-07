@@ -63,31 +63,21 @@ export const appRouter = router({
     predictions: publicProcedure.query(async () => {
       try {
         const { getDb } = await import('./db');
-        const { predictions: predictionsTable } = await import('./db/schema');
+        const { predictionsSimple } = await import('./db/schema');
         const { desc, eq } = await import('drizzle-orm');
         
         const database = getDb();
         
-        // Debug: Buscar TODOS os palpites primeiro
-        const allPreds = await database
+        // Buscar apenas os palpites publicados
+        const publishedPredictions = await database
           .select()
-          .from(predictionsTable);
-        console.log(`[DEBUG] Total de palpites no banco: ${allPreds.length}`);
+          .from(predictionsSimple)
+          .where(eq(predictionsSimple.isPublished, true))
+          .orderBy(desc(predictionsSimple.matchDate));
         
-        // Debug: Listar status de publicação
-        allPreds.forEach((p, i) => {
-          console.log(`[DEBUG] Palpite ${i + 1}: ${p.homeTeamName} vs ${p.awayTeamName} - Publicado: ${p.isPublished}`);
-        });
+        console.log(`[PREDICTIONS] Retornando ${publishedPredictions.length} palpites publicados`);
         
-        // TEMPORARIO: Retornar TODOS os palpites para diagnostico
-        const allPredictionsForReturn = await database
-          .select()
-          .from(predictionsTable)
-          .orderBy(desc(predictionsTable.matchDate));
-        
-        console.log(`[DEBUG] Retornando ${allPredictionsForReturn.length} palpites (TODOS, nao apenas publicados)`);
-        
-        return allPredictionsForReturn;
+        return publishedPredictions;
       } catch (error) {
         console.error('Erro ao carregar palpites:', error);
         throw new Error('Falha ao carregar palpites');

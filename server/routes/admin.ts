@@ -1,7 +1,7 @@
 import { publicProcedure, router } from '../_core/trpc';
 import { z } from 'zod';
 import { getDb } from '../db';
-import { predictions } from '../db/schema';
+import { predictions, predictionsSimple } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { sendPredictionToTelegram } from '../services/telegram.service';
 
@@ -32,8 +32,8 @@ export const adminRouter = router({
         const db = getDb();
         const allPredictions = await db
           .select()
-          .from(predictions)
-          .orderBy(predictions.matchDate);
+          .from(predictionsSimple)
+          .orderBy(predictionsSimple.matchDate);
         
         console.log(`Encontrados ${allPredictions.length} palpites no banco.`);
         return allPredictions;
@@ -60,8 +60,8 @@ export const adminRouter = router({
         // Buscar o palpite
         const prediction = await db
           .select()
-          .from(predictions)
-          .where(eq(predictions.id, input.predictionId))
+          .from(predictionsSimple)
+          .where(eq(predictionsSimple.id, input.predictionId))
           .limit(1);
 
         if (prediction.length === 0) {
@@ -72,12 +72,12 @@ export const adminRouter = router({
 
         // Atualizar para publicado
         await db
-          .update(predictions)
+          .update(predictionsSimple)
           .set({
             isPublished: true,
             publishedAt: new Date(),
           })
-          .where(eq(predictions.id, input.predictionId));
+          .where(eq(predictionsSimple.id, input.predictionId));
 
         // Enviar para Telegram
         await sendPredictionToTelegram({
@@ -116,12 +116,12 @@ export const adminRouter = router({
         const db = getDb();
         
         await db
-          .update(predictions)
+          .update(predictionsSimple)
           .set({
             isPublished: false,
             publishedAt: null,
           })
-          .where(eq(predictions.id, input.predictionId));
+          .where(eq(predictionsSimple.id, input.predictionId));
 
         return { success: true };
       } catch (error) {
@@ -145,8 +145,8 @@ export const adminRouter = router({
         const db = getDb();
         
         await db
-          .delete(predictions)
-          .where(eq(predictions.id, input.predictionId));
+          .delete(predictionsSimple)
+          .where(eq(predictionsSimple.id, input.predictionId));
 
         return { success: true };
       } catch (error) {

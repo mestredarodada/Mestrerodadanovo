@@ -82,3 +82,37 @@ export const predictions = pgTable('predictions', {
 
 export type Prediction = typeof predictions.$inferSelect;
 export type NewPrediction = typeof predictions.$inferInsert;
+
+// Tabela simples para palpites (alternativa)
+export const predictionsSimple = pgTable('predictions_simple', {
+  id: serial('id').primaryKey(),
+  matchId: varchar('match_id', { length: 100 }).notNull().unique(),
+  homeTeamName: varchar('home_team_name', { length: 255 }).notNull(),
+  awayTeamName: varchar('away_team_name', { length: 255 }).notNull(),
+  homeTeamCrest: text('home_team_crest'),
+  awayTeamCrest: text('away_team_crest'),
+  matchDate: timestamp('match_date').notNull(),
+  
+  // Palpites
+  mainPrediction: varchar('main_prediction', { length: 50 }).notNull(),
+  mainConfidence: varchar('main_confidence', { length: 20 }).notNull(),
+  goalsPrediction: varchar('goals_prediction', { length: 50 }).notNull(),
+  goalsConfidence: varchar('goals_confidence', { length: 20 }).notNull(),
+  bothTeamsToScore: varchar('both_teams_to_score', { length: 50 }),
+  bothTeamsToScoreConfidence: varchar('both_teams_to_score_confidence', { length: 20 }),
+  cornersPrediction: varchar('corners_prediction', { length: 50 }),
+  cornersConfidence: varchar('corners_confidence', { length: 20 }),
+  cardsPrediction: varchar('cards_prediction', { length: 50 }),
+  cardsConfidence: varchar('cards_confidence', { length: 20 }),
+  extraTip: text('extra_tip'),
+  extraConfidence: varchar('extra_confidence', { length: 20 }),
+  justification: text('justification').notNull(),
+  
+  // Status
+  isPublished: boolean('is_published').default(false).notNull(),
+  publishedAt: timestamp('published_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export type PredictionSimple = typeof predictionsSimple.$inferSelect;
+export type NewPredictionSimple = typeof predictionsSimple.$inferInsert;
