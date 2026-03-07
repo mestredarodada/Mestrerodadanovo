@@ -55,27 +55,26 @@ function mainLabel(pred: string | null | undefined, home: string, away: string) 
 
 function goalsLabel(pred: string | null | undefined) {
   if (!pred) return 'N/D';
-  return pred
-    .replace('OVER_', 'Over ')
-    .replace('UNDER_', 'Under ')
-    .replace(/_/g, '.')
-    .replace(/(\d)\.(\d)$/, '$1.$2');
+  const num = pred.replace('OVER_', '').replace('UNDER_', '').replace(/_/g, '.');
+  if (pred.startsWith('OVER_')) return `Mais de ${num} gols`;
+  if (pred.startsWith('UNDER_')) return `Menos de ${num} gols`;
+  return pred;
 }
 
 function cornersLabel(pred: string | null | undefined) {
   if (!pred) return 'N/D';
-  return pred
-    .replace('OVER_', 'Over ')
-    .replace('UNDER_', 'Under ')
-    .replace(/_/g, '.');
+  const num = pred.replace('OVER_', '').replace('UNDER_', '').replace(/_/g, '.');
+  if (pred.startsWith('OVER_')) return `Mais de ${num} escanteios`;
+  if (pred.startsWith('UNDER_')) return `Menos de ${num} escanteios`;
+  return pred;
 }
 
 function cardsLabel(pred: string | null | undefined) {
   if (!pred) return 'N/D';
-  return pred
-    .replace('OVER_', 'Over ')
-    .replace('UNDER_', 'Under ')
-    .replace(/_/g, '.');
+  const num = pred.replace('OVER_', '').replace('UNDER_', '').replace(/_/g, '.');
+  if (pred.startsWith('OVER_')) return `Mais de ${num} cartões`;
+  if (pred.startsWith('UNDER_')) return `Menos de ${num} cartões`;
+  return pred;
 }
 
 function doubleChanceLabel(dc: string | null | undefined, home: string, away: string) {
