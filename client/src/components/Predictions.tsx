@@ -1,16 +1,9 @@
 import { motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 import { Trophy, TrendingUp, AlertCircle, Zap } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
 
 export default function Predictions() {
-  const { data: predictions, isLoading, error } = useQuery({
-    queryKey: ['predictions'],
-    queryFn: async () => {
-      const response = await axios.get('/api/predictions');
-      return response.data;
-    }
-  });
+  const { data: predictions, isLoading, error } = trpc.football.predictions.useQuery();
 
   if (isLoading) {
     return (
