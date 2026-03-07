@@ -81,6 +81,53 @@ export async function runMigrations() {
     }
 
     console.log('[Migrate] Colunas extras: OK');
+
+    // Atualiza matchday dos palpites que estão com NULL
+    try {
+      const nullCheck = await db.execute(sql`SELECT COUNT(*) as cnt FROM predictions_simple WHERE matchday IS NULL`);
+      const nullCount = Number((nullCheck.rows[0] as any)?.cnt || 0);
+
+      if (nullCount > 0) {
+        console.log(`[Migrate] ${nullCount} palpites sem rodada — buscando na API...`);
+        const FOOTBALL_API_KEY = process.env.FOOTBALL_DATA_API_KEY;
+        if (FOOTBALL_API_KEY) {
+          const axios = await import('axios');
+          const [scheduledRes, finishedRes] = await Promise.allSettled([
+            axios.default.get('https://api.football-data.org/v4/competitions/BSA/matches', {
+              params: { status: 'SCHEDULED' },
+              headers: { 'X-Auth-Token': FOOTBALL_API_KEY },
+            }),
+            axios.default.get('https://api.football-data.org/v4/competitions/BSA/matches', {
+              params: { status: 'FINISHED' },
+              headers: { 'X-Auth-Token': FOOTBALL_API_KEY },
+            }),
+          ]);
+
+          const allMatches: any[] = [
+            ...(scheduledRes.status === 'fulfilled' ? scheduledRes.value.data.matches || [] : []),
+            ...(finishedRes.status === 'fulfilled' ? finishedRes.value.data.matches || [] : []),
+          ];
+
+          const predsResult = await db.execute(sql`SELECT match_id FROM predictions_simple WHERE matchday IS NULL`);
+          const preds = predsResult.rows as any[];
+
+          let updatedCount = 0;
+          for (const pred of preds) {
+            const match = allMatches.find((m: any) => String(m.id) === String(pred.match_id));
+            if (match?.matchday) {
+              await db.execute(sql.raw(`UPDATE predictions_simple SET matchday = ${match.matchday} WHERE match_id = '${pred.match_id}'`));
+              updatedCount++;
+            }
+          }
+          console.log(`[Migrate] Rodadas atualizadas: ${updatedCount}/${preds.length}`);
+        }
+      } else {
+        console.log('[Migrate] Todos os palpites já têm rodada definida.');
+      }
+    } catch (matchdayErr) {
+      console.warn('[Migrate] Aviso ao atualizar matchday:', matchdayErr instanceof Error ? matchdayErr.message : matchdayErr);
+    }
+
     console.log('[Migrate] Migrações concluídas com sucesso!');
   } catch (error) {
     console.error('[Migrate] Erro nas migrações:', error instanceof Error ? error.message : error);

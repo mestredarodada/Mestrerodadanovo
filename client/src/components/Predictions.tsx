@@ -1,5 +1,6 @@
 import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo, useState } from 'react';
 import {
   Sparkles,
   TrendingUp,
@@ -17,7 +18,6 @@ import {
   CreditCard,
   BarChart3,
 } from 'lucide-react';
-import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -364,8 +364,28 @@ export function Predictions() {
     );
   }
 
+  // Agrupa palpites por rodada
+  const grouped = useMemo(() => {
+    const map = new Map<number | string, any[]>();
+    for (const p of predictions) {
+      const key = p.matchday ?? 0;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    }
+    // Ordena rodadas em ordem decrescente (mais recente primeiro)
+    return Array.from(map.entries()).sort(([a], [b]) => Number(b) - Number(a));
+  }, [predictions]);
+
+  const latestRound = grouped[0]?.[0] ?? 0;
+  const [selectedRound, setSelectedRound] = useState<number | string>(latestRound);
+
+  const currentPredictions = useMemo(() => {
+    return grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
+  }, [grouped, selectedRound]);
+
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -385,11 +405,41 @@ export function Predictions() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {predictions.map((prediction: any) => (
-          <PredictionCard key={prediction.id} prediction={prediction} />
-        ))}
-      </div>
+      {/* Submenu de rodadas */}
+      {grouped.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {grouped.map(([round, preds]) => (
+            <button
+              key={round}
+              onClick={() => setSelectedRound(round)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                selectedRound === round
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              {Number(round) > 0 ? `Rodada ${round}` : 'Sem rodada'}
+              <span className="ml-1.5 opacity-70">({preds.length})</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Cards da rodada selecionada */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={String(selectedRound)}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+          className="grid grid-cols-1 gap-4"
+        >
+          {currentPredictions.map((prediction: any) => (
+            <PredictionCard key={prediction.id} prediction={prediction} />
+          ))}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

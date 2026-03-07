@@ -1,5 +1,6 @@
 import { trpc } from '@/lib/trpc';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useMemo } from 'react';
 import { CheckCircle2, XCircle, MinusCircle, Trophy, TrendingUp, Brain } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -209,18 +210,36 @@ export function AIResults() {
     );
   }
 
-  // Estatísticas gerais
+  // Agrupa por rodada
+  const grouped = useMemo(() => {
+    const map = new Map<number | string, any[]>();
+    for (const r of results) {
+      const key = r.matchday ?? 0;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(r);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => Number(b) - Number(a));
+  }, [results]);
+
+  const latestRound = grouped[0]?.[0] ?? 0;
+  const [selectedRound, setSelectedRound] = useState<number | string>(latestRound);
+
+  const currentResults = useMemo(() => {
+    return grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
+  }, [grouped, selectedRound]);
+
+  // Estatísticas gerais (todos os jogos)
   const totalHits = results.reduce((acc: number, r: any) => acc + r.hitCount, 0);
   const totalChecked = results.reduce((acc: number, r: any) => acc + r.totalChecked, 0);
   const globalRate = totalChecked > 0 ? Math.round((totalHits / totalChecked) * 100) : 0;
 
   return (
     <div>
-      {/* Banner de estatísticas */}
+      {/* Banner de estatísticas gerais */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 p-4 mb-6 shadow-lg"
+        className="rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 p-4 mb-4 shadow-lg"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -239,12 +258,41 @@ export function AIResults() {
         </div>
       </motion.div>
 
-      {/* Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {results.map((r: any, i: number) => (
-          <AIResultCard key={r.matchId} r={r} index={i} />
-        ))}
-      </div>
+      {/* Submenu de rodadas */}
+      {grouped.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide mb-4">
+          {grouped.map(([round, rds]) => (
+            <button
+              key={round}
+              onClick={() => setSelectedRound(round)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                selectedRound === round
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              {Number(round) > 0 ? `Rodada ${round}` : 'Sem rodada'}
+              <span className="ml-1.5 opacity-70">({rds.length})</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Cards da rodada selecionada */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={String(selectedRound)}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+        >
+          {currentResults.map((r: any, i: number) => (
+            <AIResultCard key={r.matchId} r={r} index={i} />
+          ))}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
