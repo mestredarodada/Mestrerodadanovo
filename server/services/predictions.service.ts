@@ -249,8 +249,14 @@ Analise com base nesses dados reais e forneça palpites específicos e fundament
 // ─── Gerar palpite via Groq ───────────────────────────────────────────────────
 
 async function generatePredictionWithAI(prompt: string): Promise<any> {
-  const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
-  if (!GROQ_API_KEY) throw new Error('GROQ_API_KEY não configurada');
+  // Rotação automática de chaves: se uma der 429, tenta a próxima
+  const groqKeys = [
+    process.env.GROQ_API_KEY,
+    process.env.GROQ_API_KEY_2,
+    process.env.GROQ_API_KEY_3,
+  ].filter(Boolean) as string[];
+
+  if (groqKeys.length === 0) throw new Error('Nenhuma GROQ_API_KEY configurada');
 
   const systemPrompt = `Você é o Mestre da Rodada, o mais respeitado analista de futebol brasileiro. Você analisa dados reais e fornece palpites ESPECÍFICOS e DIFERENCIADOS para cada jogo — nunca genéricos ou repetitivos.
 
@@ -284,12 +290,15 @@ JSON obrigatório (todos os campos):
   "justification": "análise detalhada em português com mínimo 4 frases, citando dados específicos do jogo (forma recente, médias de gols, H2H, posição na tabela)"
 }`;
 
-  // Retry com backoff exponencial para lidar com 429 do Groq
-  const MAX_RETRIES = 3;
+  // Tenta cada chave em ordem — se uma der 429, passa para a próxima
   let lastError: any;
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+  for (let i = 0; i < groqKeys.length; i++) {
+    const apiKey = groqKeys[i];
+    const keyLabel = `chave ${i + 1}/${groqKeys.length}`;
+
     try {
+      console.log(`[Groq] Tentando com ${keyLabel}...`);
       const response = await axios.post(
         GROQ_URL,
         {
@@ -303,7 +312,7 @@ JSON obrigatório (todos os campos):
         },
         {
           headers: {
-            Authorization: `Bearer ${GROQ_API_KEY}`,
+            Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
           timeout: 30000,
@@ -313,22 +322,23 @@ JSON obrigatório (todos os campos):
       const content = response.data.choices[0]?.message?.content || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('Resposta da IA não contém JSON válido');
+      console.log(`[Groq] ✅ Sucesso com ${keyLabel}`);
       return JSON.parse(jsonMatch[0]);
 
     } catch (err: any) {
       lastError = err;
       const status = err?.response?.status;
       if (status === 429) {
-        const waitSec = attempt * 30; // 30s, 60s, 90s
-        console.log(`[Groq] ⚠️ Rate limit (429) — tentativa ${attempt}/${MAX_RETRIES}. Aguardando ${waitSec}s...`);
-        await sleep(waitSec * 1000);
+        console.log(`[Groq] ⚠️ Rate limit (429) na ${keyLabel} — tentando próxima chave...`);
+        // Pequeno delay antes de tentar a próxima chave
+        if (i < groqKeys.length - 1) await sleep(3000);
       } else {
         throw err; // Outros erros: falha imediata
       }
     }
   }
 
-  throw lastError;
+  throw new Error(`Todas as ${groqKeys.length} chaves Groq retornaram 429. Tentando novamente no próximo ciclo.`);
 }
 
 // ─── Enviar palpite ao Telegram ───────────────────────────────────────────────
