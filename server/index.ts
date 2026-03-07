@@ -11,9 +11,6 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // API REST Routes
-  app.use("/api/predictions", apiRouter);
-
   // tRPC API (usado pelo Admin)
   const { appRouter } = await import("./routers");
   const { createContext } = await import("./_core/context");
@@ -26,6 +23,9 @@ async function startServer() {
       createContext,
     })
   );
+
+  // API REST Routes (DEVE estar ANTES do catch-all para não ser interceptado)
+  app.use("/api/predictions", apiRouter);
 
   // Serve static files from dist/public in production
   const staticPath =
