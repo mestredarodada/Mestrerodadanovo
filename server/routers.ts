@@ -79,16 +79,15 @@ export const appRouter = router({
           console.log(`[DEBUG] Palpite ${i + 1}: ${p.homeTeamName} vs ${p.awayTeamName} - Publicado: ${p.isPublished}`);
         });
         
-        // Buscar apenas os publicados
-        const publishedPredictions = await database
+        // TEMPORARIO: Retornar TODOS os palpites para diagnostico
+        const allPredictionsForReturn = await database
           .select()
           .from(predictionsTable)
-          .where(eq(predictionsTable.isPublished, true))
           .orderBy(desc(predictionsTable.matchDate));
         
-        console.log(`[DEBUG] Palpites publicados encontrados: ${publishedPredictions.length}`);
+        console.log(`[DEBUG] Retornando ${allPredictionsForReturn.length} palpites (TODOS, nao apenas publicados)`);
         
-        return publishedPredictions;
+        return allPredictionsForReturn;
       } catch (error) {
         console.error('Erro ao carregar palpites:', error);
         throw new Error('Falha ao carregar palpites');
