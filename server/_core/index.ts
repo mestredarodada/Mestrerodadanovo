@@ -7,6 +7,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import apiRouter from "../routes/predictions";
+import { runMigrations } from "../db/migrate";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -28,6 +29,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Executa migrações automáticas antes de iniciar
+  await runMigrations();
+
   const app = express();
   const server = createServer(app);
 
