@@ -11,10 +11,10 @@ import { runMigrations } from "../db/migrate";
 import { generateNextPrediction } from "../services/predictions.service";
 
 // ─── Job de geração sequencial de palpites ────────────────────────────────────
-// Gera 1 palpite a cada 2 minutos, respeitando o rate limit da API gratuita.
+// Gera 1 palpite a cada 5 minutos, respeitando o rate limit da API gratuita.
 // Pula automaticamente jogos que já têm palpite recente (menos de 20h).
 
-const PREDICTION_JOB_INTERVAL_MS = 2 * 60 * 1000; // 2 minutos
+const PREDICTION_JOB_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
 
 function startPredictionJob() {
   if (!process.env.GROQ_API_KEY || !process.env.FOOTBALL_DATA_API_KEY) {

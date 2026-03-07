@@ -55,6 +55,18 @@ export async function runMigrations() {
       { name: 'main_probability', type: 'INTEGER' },
       { name: 'goals_probability', type: 'INTEGER' },
       { name: 'bts_probability', type: 'INTEGER' },
+      // Novos campos v3
+      { name: 'home_probability', type: 'INTEGER' },
+      { name: 'draw_probability', type: 'INTEGER' },
+      { name: 'away_probability', type: 'INTEGER' },
+      { name: 'double_chance', type: 'VARCHAR(10)' },
+      { name: 'double_chance_confidence', type: 'VARCHAR(20)' },
+      { name: 'double_chance_probability', type: 'INTEGER' },
+      { name: 'half_time_prediction', type: 'VARCHAR(20)' },
+      { name: 'half_time_confidence', type: 'VARCHAR(20)' },
+      { name: 'likely_score', type: 'VARCHAR(20)' },
+      { name: 'best_bet', type: 'TEXT' },
+      { name: 'best_bet_confidence', type: 'VARCHAR(20)' },
     ];
 
     for (const col of newColumns) {

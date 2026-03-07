@@ -47,20 +47,60 @@ export const appRouter = router({
     predictions: publicProcedure.query(async () => {
       try {
         const { getDb } = await import('./db');
-        const { predictionsSimple } = await import('./db/schema');
-        const { desc, eq } = await import('drizzle-orm');
+        const { sql } = await import('drizzle-orm');
 
         const database = getDb();
 
-        const publishedPredictions = await database
-          .select()
-          .from(predictionsSimple)
-          .where(eq(predictionsSimple.isPublished, true))
-          .orderBy(desc(predictionsSimple.matchDate));
+        // Busca todos os campos incluindo os novos (home_probability, likely_score, etc.)
+        const result = await database.execute(sql`
+          SELECT *
+          FROM predictions_simple
+          WHERE is_published = true
+          ORDER BY match_date DESC
+        `);
 
-        console.log(`[PREDICTIONS] Retornando ${publishedPredictions.length} palpites`);
+        // Normaliza os campos snake_case para camelCase
+        const predictions = (result.rows || result as any[]).map((row: any) => ({
+          id: row.id,
+          matchId: row.match_id,
+          homeTeamName: row.home_team_name,
+          awayTeamName: row.away_team_name,
+          homeTeamCrest: row.home_team_crest,
+          awayTeamCrest: row.away_team_crest,
+          matchDate: row.match_date,
+          mainPrediction: row.main_prediction,
+          mainConfidence: row.main_confidence,
+          mainProbability: row.main_probability ? Number(row.main_probability) : null,
+          homeProbability: row.home_probability ? Number(row.home_probability) : null,
+          drawProbability: row.draw_probability ? Number(row.draw_probability) : null,
+          awayProbability: row.away_probability ? Number(row.away_probability) : null,
+          goalsPrediction: row.goals_prediction,
+          goalsConfidence: row.goals_confidence,
+          goalsProbability: row.goals_probability ? Number(row.goals_probability) : null,
+          bothTeamsToScore: row.both_teams_to_score,
+          bothTeamsToScoreConfidence: row.both_teams_to_score_confidence,
+          btsProbability: row.bts_probability ? Number(row.bts_probability) : null,
+          cornersPrediction: row.corners_prediction,
+          cornersConfidence: row.corners_confidence,
+          cardsPrediction: row.cards_prediction,
+          cardsConfidence: row.cards_confidence,
+          doubleChance: row.double_chance,
+          doubleChanceConfidence: row.double_chance_confidence,
+          doubleChanceProbability: row.double_chance_probability ? Number(row.double_chance_probability) : null,
+          halfTimePrediction: row.half_time_prediction,
+          halfTimeConfidence: row.half_time_confidence,
+          likelyScore: row.likely_score,
+          bestBet: row.best_bet,
+          bestBetConfidence: row.best_bet_confidence,
+          extraTip: row.extra_tip,
+          extraConfidence: row.extra_confidence,
+          justification: row.justification,
+          isPublished: row.is_published,
+          createdAt: row.created_at,
+        }));
 
-        return publishedPredictions;
+        console.log(`[PREDICTIONS] Retornando ${predictions.length} palpites`);
+        return predictions;
       } catch (error) {
         console.error('Erro ao carregar palpites:', error);
         throw new Error('Falha ao carregar palpites');
