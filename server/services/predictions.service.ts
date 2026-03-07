@@ -355,16 +355,28 @@ async function sendToTelegram(match: any, ai: any): Promise<void> {
   const home = match.homeTeam.name;
   const away = match.awayTeam.name;
 
-  const confEmoji = (c: string) => c === 'HIGH' ? '🟢' : c === 'MEDIUM' ? '🟡' : '🔴';
-  const confLabel = (c: string) => c === 'HIGH' ? 'Alta' : c === 'MEDIUM' ? 'Média' : 'Baixa';
+  // Helpers para formatar os campos da IA
+  const formatLine = (val: string | undefined, overPrefix = 'Mais de ', underPrefix = 'Menos de ') => {
+    if (!val) return 'N/D';
+    return val
+      .replace('OVER_', overPrefix)
+      .replace('UNDER_', underPrefix)
+      .replace(/_/g, '.');
+  };
 
-  const mainLabel = ai.mainPrediction === 'HOME' ? `Vitória ${home}` :
-    ai.mainPrediction === 'DRAW' ? 'Empate' : `Vitória ${away}`;
+  const mainLabel = ai.mainPrediction === 'HOME' ? `🏠 Vitória ${home}` :
+    ai.mainPrediction === 'DRAW' ? '🤝 Empate' : `✈️ Vitória ${away}`;
 
-  const goalsLabel = ai.goalsPrediction?.replace('OVER_', 'Mais de ').replace('UNDER_', 'Menos de ').replace('_', '.') || 'N/D';
-  const btsLabel = ai.bothTeamsToScore === 'YES' ? 'Ambas marcam: SIM' : 'Ambas marcam: NÃO';
-  const htLabel = ai.halfTimePrediction === 'HOME' ? `${home} vence 1ºT` :
-    ai.halfTimePrediction === 'DRAW' ? 'Empate no 1ºT' : `${away} vence 1ºT`;
+  const btsLabel = ai.bothTeamsToScore === 'YES' ? '✅ Ambas marcam: SIM' : '❌ Ambas marcam: NÃO';
+
+  const htLabel = ai.halfTimePrediction === 'HOME' ? `${home} vence no 1ºT` :
+    ai.halfTimePrediction === 'DRAW' ? 'Empate no 1ºT' : `${away} vence no 1ºT`;
+
+  const dcLabel = ai.doubleChance
+    ? ai.doubleChance === '1X' ? `${home} ou Empate`
+    : ai.doubleChance === 'X2' ? `Empate ou ${away}`
+    : `${home} ou ${away}`
+    : null;
 
   const matchDateStr = new Date(match.utcDate).toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
@@ -378,28 +390,22 @@ async function sendToTelegram(match: any, ai: any): Promise<void> {
 📅 ${matchDateStr} | Brasileirão Série A
 
 ━━━━━━━━━━━━━━━━━━━━
-🎯 *PALPITE PRINCIPAL*
-${confEmoji(ai.mainConfidence)} ${mainLabel} (${ai.mainProbability || '?'}% de probabilidade)
-Confiança: ${confLabel(ai.mainConfidence)}
-
-━━━━━━━━━━━━━━━━━━━━
-📊 *PROBABILIDADES*
-🏠 ${home} vence: ${ai.homeProbability || '?'}%
-🤝 Empate: ${ai.drawProbability || '?'}%
-✈️ ${away} vence: ${ai.awayProbability || '?'}%
+🎯 *RESULTADO*
+${mainLabel}
 
 ━━━━━━━━━━━━━━━━━━━━
 📋 *MERCADOS*
-${confEmoji(ai.goalsConfidence)} Gols: ${goalsLabel} gols (${ai.goalsProbability || '?'}%)
-${confEmoji(ai.bothTeamsToScoreConfidence)} ${btsLabel} (${ai.btsProbability || '?'}%)
-${confEmoji(ai.halfTimeConfidence)} ${htLabel}
-${confEmoji(ai.cornersConfidence)} Escanteios: ${ai.cornersPrediction?.replace('OVER_', 'Mais de ').replace('UNDER_', 'Menos de ').replace('_', '.') || 'N/D'}
-${confEmoji(ai.cardsConfidence)} Cartões: ${ai.cardsPrediction?.replace('OVER_', 'Mais de ').replace('UNDER_', 'Menos de ').replace('_', '.') || 'N/D'}
+⚽ Gols: ${formatLine(ai.goalsPrediction)} gols
+${btsLabel}
+⏱️ 1º Tempo: ${htLabel}
+🔲 Escanteios: ${formatLine(ai.cornersPrediction)} escanteios
+🟨 Cartões: ${formatLine(ai.cardsPrediction)} cartões${dcLabel ? `
+🔀 Dupla Chance: ${dcLabel}` : ''}
 
 ━━━━━━━━━━━━━━━━━━━━
 ⭐ *MELHOR APOSTA DO JOGO*
-${ai.bestBet || 'N/D'} ${confEmoji(ai.bestBetConfidence || 'MEDIUM')}
-Placar mais provável: *${ai.likelyScore || 'N/D'}*
+${ai.bestBet || 'N/D'}
+🎯 Placar mais provável: *${ai.likelyScore || 'N/D'}*
 
 ━━━━━━━━━━━━━━━━━━━━
 🧠 *ANÁLISE DO MESTRE*
