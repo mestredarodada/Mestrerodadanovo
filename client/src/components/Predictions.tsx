@@ -16,10 +16,15 @@ import {
   Flag,
   CreditCard,
   Users,
+  ExternalLink,
 } from 'lucide-react';
+
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+// Link de afiliado da casa de apostas parceira
+const AFFILIATE_LINK = 'https://1wrlst.com/?open=register&p=c2f3';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -319,6 +324,18 @@ function PredictionCard({ prediction, index }: { prediction: any; index: number 
             </div>
           </div>
         )}
+
+        {/* Botão de afiliado */}
+        <a
+          href={AFFILIATE_LINK}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 text-white font-bold text-sm rounded-xl py-3 px-4 transition-all duration-200 shadow-md hover:shadow-orange-300/40 dark:hover:shadow-orange-900/40 mb-3"
+        >
+          <ExternalLink size={15} />
+          <span>Faça sua aposta aqui</span>
+          <span className="text-orange-200 text-xs font-normal">(casa recomendada pelo Mestre)</span>
+        </a>
 
         {/* Análise expansível */}
         {prediction.justification && (
