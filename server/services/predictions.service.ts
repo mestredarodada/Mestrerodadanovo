@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getDb } from '../db';
-import { predictions } from '../db/schema';
+import { predictions, predictionsSimple } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { sendPredictionToTelegram } from './telegram.service';
 import { fetchLatestFootballNews } from './news.service';
@@ -195,44 +195,18 @@ export async function savePredictionToDatabase(
   
   const existing = await database
     .select()
-    .from(predictions)
-    .where(eq(predictions.matchId, String(match.id)))
+    .from(predictionsSimple)
+    .where(eq(predictionsSimple.matchId, String(match.id)))
     .limit(1);
 
   const predictionData: any = {
     matchId: String(match.id),
-    homeTeamId: String(match.homeTeam.id),
     homeTeamName: homeTeam.team.name || match.homeTeam.name,
     homeTeamCrest: homeTeam.team.crest || match.homeTeam.crest,
-    awayTeamId: String(match.awayTeam.id),
     awayTeamName: awayTeam.team.name || match.awayTeam.name,
     awayTeamCrest: awayTeam.team.crest || match.awayTeam.crest,
     matchDate: new Date(match.utcDate),
-    matchday: String(match.matchday || 0),
-    venue: match.venue || 'Não informado',
     
-    // Estatísticas Casa
-    homeTeamPosition: String(homeTeam.position || 0),
-    homeTeamPoints: String(homeTeam.points || 0),
-    homeTeamPlayedGames: String(homeTeam.playedGames || 0),
-    homeTeamWon: String(homeTeam.won || 0),
-    homeTeamDraw: String(homeTeam.draw || 0),
-    homeTeamLost: String(homeTeam.lost || 0),
-    homeTeamGoalsFor: String(homeTeam.goalsFor || 0),
-    homeTeamGoalsAgainst: String(homeTeam.goalsAgainst || 0),
-    homeTeamGoalDifference: String(homeTeam.goalDifference || 0),
-    
-    // Estatísticas Visitante
-    awayTeamPosition: String(awayTeam.position || 0),
-    awayTeamPoints: String(awayTeam.points || 0),
-    awayTeamPlayedGames: String(awayTeam.playedGames || 0),
-    awayTeamWon: String(awayTeam.won || 0),
-    awayTeamDraw: String(awayTeam.draw || 0),
-    awayTeamLost: String(awayTeam.lost || 0),
-    awayTeamGoalsFor: String(awayTeam.goalsFor || 0),
-    awayTeamGoalsAgainst: String(awayTeam.goalsAgainst || 0),
-    awayTeamGoalDifference: String(awayTeam.goalDifference || 0),
-
     // Palpites
     mainPrediction: aiPrediction.mainPrediction,
     mainConfidence: aiPrediction.mainConfidence,
@@ -252,13 +226,13 @@ export async function savePredictionToDatabase(
 
   if (existing.length === 0) {
     console.log(`➕ Inserindo novo palpite para ${predictionData.homeTeamName} vs ${predictionData.awayTeamName}`);
-    await database.insert(predictions).values(predictionData);
+    await database.insert(predictionsSimple).values(predictionData);
   } else {
     console.log(`🔄 Atualizando palpite existente para ${predictionData.homeTeamName} vs ${predictionData.awayTeamName}`);
     await database
-      .update(predictions)
+      .update(predictionsSimple)
       .set(predictionData)
-      .where(eq(predictions.matchId, String(match.id)));
+      .where(eq(predictionsSimple.matchId, String(match.id)));
   }
 }
 
