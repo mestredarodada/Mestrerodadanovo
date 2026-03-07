@@ -67,13 +67,28 @@ export const appRouter = router({
         const { desc, eq } = await import('drizzle-orm');
         
         const database = getDb();
-        const allPredictions = await database
+        
+        // Debug: Buscar TODOS os palpites primeiro
+        const allPreds = await database
+          .select()
+          .from(predictionsTable);
+        console.log(`[DEBUG] Total de palpites no banco: ${allPreds.length}`);
+        
+        // Debug: Listar status de publicação
+        allPreds.forEach((p, i) => {
+          console.log(`[DEBUG] Palpite ${i + 1}: ${p.homeTeamName} vs ${p.awayTeamName} - Publicado: ${p.isPublished}`);
+        });
+        
+        // Buscar apenas os publicados
+        const publishedPredictions = await database
           .select()
           .from(predictionsTable)
           .where(eq(predictionsTable.isPublished, true))
           .orderBy(desc(predictionsTable.matchDate));
         
-        return allPredictions;
+        console.log(`[DEBUG] Palpites publicados encontrados: ${publishedPredictions.length}`);
+        
+        return publishedPredictions;
       } catch (error) {
         console.error('Erro ao carregar palpites:', error);
         throw new Error('Falha ao carregar palpites');
