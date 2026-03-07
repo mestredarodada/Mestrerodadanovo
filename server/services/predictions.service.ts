@@ -299,30 +299,51 @@ JSON obrigatório (todos os campos):
   "justification": "análise detalhada em português com mínimo 4 frases, citando dados específicos do jogo (forma recente, médias de gols, H2H, posição na tabela)"
 }`;
 
-  const response = await axios.post(
-    GROQ_URL,
-    {
-      model: MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.35,
-      max_tokens: 1500,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 30000,
-    }
-  );
+  // Retry com backoff exponencial para lidar com 429 do Groq
+  const MAX_RETRIES = 3;
+  let lastError: any;
 
-  const content = response.data.choices[0]?.message?.content || '';
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Resposta da IA não contém JSON válido');
-  return JSON.parse(jsonMatch[0]);
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await axios.post(
+        GROQ_URL,
+        {
+          model: MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.35,
+          max_tokens: 1500,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${GROQ_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 30000,
+        }
+      );
+
+      const content = response.data.choices[0]?.message?.content || '';
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Resposta da IA não contém JSON válido');
+      return JSON.parse(jsonMatch[0]);
+
+    } catch (err: any) {
+      lastError = err;
+      const status = err?.response?.status;
+      if (status === 429) {
+        const waitSec = attempt * 30; // 30s, 60s, 90s
+        console.log(`[Groq] ⚠️ Rate limit (429) — tentativa ${attempt}/${MAX_RETRIES}. Aguardando ${waitSec}s...`);
+        await sleep(waitSec * 1000);
+      } else {
+        throw err; // Outros erros: falha imediata
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 // ─── Enviar palpite ao Telegram ───────────────────────────────────────────────
