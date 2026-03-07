@@ -13,9 +13,9 @@ import {
   Star,
   Shield,
   Zap,
-  BarChart3,
   Flag,
   CreditCard,
+  BarChart3,
 } from 'lucide-react';
 import { useState } from 'react';
 import { format } from 'date-fns';
@@ -25,32 +25,19 @@ const AFFILIATE_LINK = 'https://1wrlst.com/?open=register&p=c2f3';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function confBadge(c: string | null | undefined) {
-  if (c === 'HIGH') return 'bg-emerald-500 text-white';
-  if (c === 'MEDIUM') return 'bg-yellow-500 text-white';
-  return 'bg-red-500 text-white';
-}
-function confLabel(c: string | null | undefined) {
-  if (c === 'HIGH') return 'Alta';
-  if (c === 'MEDIUM') return 'Média';
-  return 'Baixa';
-}
-function confBar(c: string | null | undefined) {
-  if (c === 'HIGH') return 'bg-emerald-500';
-  if (c === 'MEDIUM') return 'bg-yellow-500';
-  return 'bg-red-500';
-}
-function confBarWidth(c: string | null | undefined) {
-  if (c === 'HIGH') return 'w-[85%]';
-  if (c === 'MEDIUM') return 'w-[55%]';
-  return 'w-[30%]';
-}
-
 function mainLabel(pred: string | null | undefined, home: string, away: string) {
   if (pred === 'HOME') return { text: `${home} vence`, short: '1', color: 'from-emerald-500 to-emerald-600' };
   if (pred === 'DRAW') return { text: 'Empate', short: 'X', color: 'from-yellow-500 to-yellow-600' };
   if (pred === 'AWAY') return { text: `${away} vence`, short: '2', color: 'from-blue-500 to-blue-600' };
   return { text: 'N/D', short: '?', color: 'from-gray-400 to-gray-500' };
+}
+
+function translateLine(pred: string | null | undefined): string {
+  if (!pred) return 'N/D';
+  const num = pred.replace('OVER_', '').replace('UNDER_', '').replace(/_/g, '.');
+  if (pred.startsWith('OVER_')) return `Mais de ${num}`;
+  if (pred.startsWith('UNDER_')) return `Menos de ${num}`;
+  return pred;
 }
 
 function goalsLabel(pred: string | null | undefined) {
@@ -91,21 +78,24 @@ function halfTimeLabel(ht: string | null | undefined, home: string, away: string
   return 'N/D';
 }
 
-// ─── Componente de barra de probabilidade ─────────────────────────────────────
+// ─── Item de mercado ──────────────────────────────────────────────────────────
 
-function ProbBar({ label, pct, color }: { label: string; pct: number; color: string }) {
+function MarketItem({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground w-20 truncate">{label}</span>
-      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-        <motion.div
-          className={`h-full rounded-full ${color}`}
-          initial={{ width: 0 }}
-          animate={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-        />
+    <div className="bg-muted/50 rounded-xl p-3 flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
+        <span className="text-muted-foreground">{icon}</span>
+        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{label}</span>
       </div>
-      <span className="text-xs font-bold text-foreground w-8 text-right">{pct}%</span>
+      <p className="text-xs font-bold text-foreground leading-snug">{value}</p>
     </div>
   );
 }
@@ -124,12 +114,11 @@ function PredictionCard({ prediction }: { prediction: any }) {
     ? format(matchDate, "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })
     : 'Data não disponível';
 
-  // Probabilidades (podem vir como campos extras ou estimadas pela confiança)
-  const homePct = prediction.homeProbability ?? (prediction.mainPrediction === 'HOME' ? 55 : 25);
-  const drawPct = prediction.drawProbability ?? 25;
-  const awayPct = prediction.awayProbability ?? (prediction.mainPrediction === 'AWAY' ? 55 : 20);
-  const goalsPct = prediction.goalsProbability ?? (prediction.goalsConfidence === 'HIGH' ? 75 : prediction.goalsConfidence === 'MEDIUM' ? 55 : 35);
-  const btsPct = prediction.btsProbability ?? (prediction.bothTeamsToScoreConfidence === 'HIGH' ? 70 : 45);
+  const btsValue = prediction.bothTeamsToScore === 'YES'
+    ? 'Ambas marcam: SIM'
+    : prediction.bothTeamsToScore === 'NO'
+    ? 'Ambas marcam: NÃO'
+    : 'N/D';
 
   return (
     <motion.div
@@ -137,8 +126,8 @@ function PredictionCard({ prediction }: { prediction: any }) {
       animate={{ opacity: 1, y: 0 }}
       className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
     >
-      {/* Header do card — times */}
-      <div className="p-4 pb-3">
+      {/* Header — data e competição */}
+      <div className="px-4 pt-4 pb-3">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs text-muted-foreground flex items-center gap-1">
             <Clock size={11} />
@@ -151,7 +140,6 @@ function PredictionCard({ prediction }: { prediction: any }) {
 
         {/* Times */}
         <div className="flex items-center justify-between gap-3">
-          {/* Time da casa */}
           <div className="flex flex-col items-center gap-1.5 flex-1">
             {prediction.homeTeamCrest ? (
               <img src={prediction.homeTeamCrest} alt={home} className="w-10 h-10 object-contain" />
@@ -163,15 +151,14 @@ function PredictionCard({ prediction }: { prediction: any }) {
             <span className="text-xs font-semibold text-center leading-tight">{home}</span>
           </div>
 
-          {/* Placar provável */}
+          {/* Placar provável no centro */}
           <div className="flex flex-col items-center gap-1">
-            <div className={`bg-gradient-to-br ${main.color} text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm`}>
+            <div className={`bg-gradient-to-br ${main.color} text-white text-sm font-black px-3 py-1.5 rounded-xl shadow-sm min-w-[52px] text-center`}>
               {prediction.likelyScore || 'VS'}
             </div>
             <span className="text-[10px] text-muted-foreground">placar provável</span>
           </div>
 
-          {/* Time visitante */}
           <div className="flex flex-col items-center gap-1.5 flex-1">
             {prediction.awayTeamCrest ? (
               <img src={prediction.awayTeamCrest} alt={away} className="w-10 h-10 object-contain" />
@@ -185,135 +172,66 @@ function PredictionCard({ prediction }: { prediction: any }) {
         </div>
       </div>
 
-      {/* Palpite principal */}
+      {/* Palpite principal — banner colorido */}
       <div className={`mx-4 mb-3 bg-gradient-to-r ${main.color} rounded-xl p-3 text-white`}>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] font-medium opacity-80 uppercase tracking-wide">Resultado</p>
             <p className="text-sm font-bold">{main.text}</p>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <span className="text-xl font-black opacity-90">{main.short}</span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-              prediction.mainConfidence === 'HIGH' ? 'bg-white/30' :
-              prediction.mainConfidence === 'MEDIUM' ? 'bg-white/20' : 'bg-white/10'
-            }`}>
-              {confLabel(prediction.mainConfidence)} confiança
-            </span>
-          </div>
+          <span className="text-2xl font-black opacity-90">{main.short}</span>
         </div>
       </div>
 
-      {/* Barras de probabilidade 1X2 */}
-      <div className="px-4 mb-3 space-y-1.5">
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Probabilidades</p>
-        <ProbBar label={home} pct={homePct} color="bg-emerald-500" />
-        <ProbBar label="Empate" pct={drawPct} color="bg-yellow-500" />
-        <ProbBar label={away} pct={awayPct} color="bg-blue-500" />
-      </div>
-
-      {/* Mercados em grid */}
+      {/* Grid de mercados — sem % e sem termômetros */}
       <div className="px-4 mb-3">
         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mercados</p>
         <div className="grid grid-cols-2 gap-2">
 
-          {/* Gols */}
-          <div className="bg-muted/60 rounded-xl p-2.5">
-            <div className="flex items-center gap-1.5 mb-1">
-              <TrendingUp size={12} className="text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground font-medium">Gols</span>
-            </div>
-            <p className="text-xs font-bold text-foreground">{goalsLabel(prediction.goalsPrediction)}</p>
-            <div className="flex items-center justify-between mt-1.5">
-              <div className="flex-1 h-1 bg-background rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${confBar(prediction.goalsConfidence)} ${confBarWidth(prediction.goalsConfidence)}`} />
-              </div>
-              <span className="text-[10px] text-muted-foreground ml-2">{goalsPct}%</span>
-            </div>
-          </div>
+          <MarketItem
+            icon={<TrendingUp size={12} />}
+            label="Gols"
+            value={goalsLabel(prediction.goalsPrediction)}
+          />
 
-          {/* Ambas marcam */}
-          <div className="bg-muted/60 rounded-xl p-2.5">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Target size={12} className="text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground font-medium">Ambas marcam</span>
-            </div>
-            <p className="text-xs font-bold text-foreground">
-              {prediction.bothTeamsToScore === 'YES' ? 'BTTS Sim' : prediction.bothTeamsToScore === 'NO' ? 'BTTS Não' : 'N/D'}
-            </p>
-            <div className="flex items-center justify-between mt-1.5">
-              <div className="flex-1 h-1 bg-background rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${confBar(prediction.bothTeamsToScoreConfidence)} ${confBarWidth(prediction.bothTeamsToScoreConfidence)}`} />
-              </div>
-              <span className="text-[10px] text-muted-foreground ml-2">{btsPct}%</span>
-            </div>
-          </div>
+          <MarketItem
+            icon={<Target size={12} />}
+            label="Ambas marcam"
+            value={btsValue}
+          />
 
-          {/* Escanteios */}
           {prediction.cornersPrediction && (
-            <div className="bg-muted/60 rounded-xl p-2.5">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Flag size={12} className="text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground font-medium">Escanteios</span>
-              </div>
-              <p className="text-xs font-bold text-foreground">{cornersLabel(prediction.cornersPrediction)}</p>
-              <div className="flex items-center justify-between mt-1.5">
-                <div className="flex-1 h-1 bg-background rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${confBar(prediction.cornersConfidence)} ${confBarWidth(prediction.cornersConfidence)}`} />
-                </div>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ml-2 ${confBadge(prediction.cornersConfidence)}`}>
-                  {confLabel(prediction.cornersConfidence)}
-                </span>
-              </div>
-            </div>
+            <MarketItem
+              icon={<Flag size={12} />}
+              label="Escanteios"
+              value={cornersLabel(prediction.cornersPrediction)}
+            />
           )}
 
-          {/* Cartões */}
           {prediction.cardsPrediction && (
-            <div className="bg-muted/60 rounded-xl p-2.5">
-              <div className="flex items-center gap-1.5 mb-1">
-                <CreditCard size={12} className="text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground font-medium">Cartões</span>
-              </div>
-              <p className="text-xs font-bold text-foreground">{cardsLabel(prediction.cardsPrediction)}</p>
-              <div className="flex items-center justify-between mt-1.5">
-                <div className="flex-1 h-1 bg-background rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${confBar(prediction.cardsConfidence)} ${confBarWidth(prediction.cardsConfidence)}`} />
-                </div>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ml-2 ${confBadge(prediction.cardsConfidence)}`}>
-                  {confLabel(prediction.cardsConfidence)}
-                </span>
-              </div>
-            </div>
+            <MarketItem
+              icon={<CreditCard size={12} />}
+              label="Cartões"
+              value={cardsLabel(prediction.cardsPrediction)}
+            />
           )}
 
-          {/* Dupla Chance */}
           {prediction.doubleChance && (
-            <div className="bg-muted/60 rounded-xl p-2.5">
-              <div className="flex items-center gap-1.5 mb-1">
-                <BarChart3 size={12} className="text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground font-medium">Dupla Chance</span>
-              </div>
-              <p className="text-xs font-bold text-foreground">{doubleChanceLabel(prediction.doubleChance, home, away)}</p>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold mt-1 inline-block ${confBadge(prediction.doubleChanceConfidence)}`}>
-                {confLabel(prediction.doubleChanceConfidence)}
-              </span>
-            </div>
+            <MarketItem
+              icon={<BarChart3 size={12} />}
+              label="Dupla Chance"
+              value={doubleChanceLabel(prediction.doubleChance, home, away)}
+            />
           )}
 
-          {/* 1º Tempo */}
           {prediction.halfTimePrediction && (
-            <div className="bg-muted/60 rounded-xl p-2.5">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Zap size={12} className="text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground font-medium">1º Tempo</span>
-              </div>
-              <p className="text-xs font-bold text-foreground">{halfTimeLabel(prediction.halfTimePrediction, home, away)}</p>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold mt-1 inline-block ${confBadge(prediction.halfTimeConfidence)}`}>
-                {confLabel(prediction.halfTimeConfidence)}
-              </span>
-            </div>
+            <MarketItem
+              icon={<Zap size={12} />}
+              label="1º Tempo"
+              value={halfTimeLabel(prediction.halfTimePrediction, home, away)}
+            />
           )}
+
         </div>
       </div>
 
@@ -322,7 +240,9 @@ function PredictionCard({ prediction }: { prediction: any }) {
         <div className="mx-4 mb-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl p-3">
           <div className="flex items-center gap-1.5 mb-1">
             <Star size={13} className="text-amber-500 fill-amber-500" />
-            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Melhor aposta do jogo</span>
+            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+              Melhor aposta do jogo
+            </span>
           </div>
           <p className="text-xs font-semibold text-foreground">{prediction.extraTip}</p>
         </div>
@@ -380,7 +300,7 @@ function PredictionCard({ prediction }: { prediction: any }) {
 
 export function Predictions() {
   const { data: predictions, isLoading, error, refetch } = trpc.football.predictions.useQuery(undefined, {
-    refetchInterval: 5 * 60 * 1000, // Atualiza a cada 5 minutos
+    refetchInterval: 5 * 60 * 1000,
     staleTime: 2 * 60 * 1000,
   });
 
@@ -446,7 +366,6 @@ export function Predictions() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -466,7 +385,6 @@ export function Predictions() {
         </button>
       </div>
 
-      {/* Cards */}
       <div className="grid grid-cols-1 gap-4">
         {predictions.map((prediction: any) => (
           <PredictionCard key={prediction.id} prediction={prediction} />

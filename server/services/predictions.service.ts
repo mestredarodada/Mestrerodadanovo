@@ -256,45 +256,30 @@ async function generatePredictionWithAI(prompt: string): Promise<any> {
 
 REGRAS OBRIGATÓRIAS:
 1. Use os dados fornecidos. Cada jogo é único — palpites diferentes para jogos diferentes.
-2. Mencione dados específicos na justificativa (forma recente, médias, H2H, posição na tabela).
-3. Os campos de probabilidade devem ser números reais calculados com base nos dados (não invente).
-4. O campo "bestBet" deve ser o mercado com MAIOR confiança — aquele que você mais recomenda.
+2. Para cada mercado, escolha a LINHA MAIS ADEQUADA com base nos dados reais do jogo.
+3. Mencione dados específicos na justificativa (forma recente, médias, H2H, posição na tabela).
+4. O campo "bestBet" deve descrever o palpite mais seguro em português claro e direto.
 5. Retorne APENAS JSON válido, sem texto adicional, sem markdown, sem explicações fora do JSON.
 
 JSON obrigatório (todos os campos):
 {
   "mainPrediction": "HOME" | "DRAW" | "AWAY",
-  "mainConfidence": "HIGH" | "MEDIUM" | "LOW",
-  "mainProbability": número 0-100,
-  "homeProbability": número 0-100,
-  "drawProbability": número 0-100,
-  "awayProbability": número 0-100,
 
   "doubleChance": "1X" | "X2" | "12",
-  "doubleChanceConfidence": "HIGH" | "MEDIUM" | "LOW",
-  "doubleChanceProbability": número 0-100,
 
-  "goalsPrediction": "OVER_2_5" | "UNDER_2_5" | "OVER_1_5" | "UNDER_1_5" | "OVER_3_5" | "UNDER_3_5",
-  "goalsConfidence": "HIGH" | "MEDIUM" | "LOW",
-  "goalsProbability": número 0-100,
+  "goalsPrediction": escolha a linha mais adequada entre: "OVER_0_5" | "OVER_1_5" | "OVER_2_5" | "OVER_3_5" | "UNDER_0_5" | "UNDER_1_5" | "UNDER_2_5" | "UNDER_3_5",
 
   "bothTeamsToScore": "YES" | "NO",
-  "bothTeamsToScoreConfidence": "HIGH" | "MEDIUM" | "LOW",
-  "btsProbability": número 0-100,
 
-  "cornersPrediction": "OVER_9_5" | "UNDER_9_5" | "OVER_8_5" | "UNDER_8_5",
-  "cornersConfidence": "HIGH" | "MEDIUM" | "LOW",
+  "cornersPrediction": escolha a linha mais adequada entre: "OVER_6_5" | "OVER_7_5" | "OVER_8_5" | "OVER_9_5" | "UNDER_6_5" | "UNDER_7_5" | "UNDER_8_5" | "UNDER_9_5",
 
-  "cardsPrediction": "OVER_3_5" | "UNDER_3_5" | "OVER_4_5" | "UNDER_4_5",
-  "cardsConfidence": "HIGH" | "MEDIUM" | "LOW",
+  "cardsPrediction": escolha a linha mais adequada entre: "OVER_2_5" | "OVER_3_5" | "OVER_4_5" | "OVER_5_5" | "UNDER_2_5" | "UNDER_3_5" | "UNDER_4_5" | "UNDER_5_5",
 
   "halfTimePrediction": "HOME" | "DRAW" | "AWAY",
-  "halfTimeConfidence": "HIGH" | "MEDIUM" | "LOW",
 
-  "likelyScore": "string com placar mais provável, ex: 1x0 ou 2x1",
+  "likelyScore": "placar mais provável, ex: 1x0 ou 2x1",
 
-  "bestBet": "string descrevendo o palpite mais seguro do jogo em português, ex: Vitória do Flamengo + Over 1.5 gols",
-  "bestBetConfidence": "HIGH" | "MEDIUM" | "LOW",
+  "bestBet": "palpite mais seguro do jogo em português direto, ex: Vitória do Flamengo + Mais de 1.5 gols",
 
   "justification": "análise detalhada em português com mínimo 4 frases, citando dados específicos do jogo (forma recente, médias de gols, H2H, posição na tabela)"
 }`;
