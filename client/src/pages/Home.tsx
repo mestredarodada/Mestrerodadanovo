@@ -14,7 +14,7 @@ import {
 import Standings from '@/components/Standings';
 import UpcomingMatches from '@/components/UpcomingMatches';
 import RecentResults from '@/components/RecentResults';
-import Predictions from '@/components/Predictions';
+import { Predictions } from '@/components/Predictions';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type Section = 'predictions' | 'standings' | 'upcoming' | 'results';
