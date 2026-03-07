@@ -44,7 +44,7 @@ export default function Predictions() {
     );
   }
 
-  if (!predictions || predictions.length === 0) {
+  if (!predictions || !Array.isArray(predictions) || predictions.length === 0) {
     return (
       <motion.div
         className="bg-card rounded-2xl border border-border p-12 text-center"

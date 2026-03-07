@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
     res.json(allPredictions);
   } catch (error) {
     console.error('Erro ao buscar palpites:', error);
-    res.status(500).json({ error: 'Erro ao buscar palpites' });
+    res.status(500).json([]); // Retorna um array vazio em caso de erro para evitar quebra no frontend
   }
 });
 
