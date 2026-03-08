@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { analytics } from '@/hooks/useAnalytics';
 import { useParams, Link } from 'wouter';
 import {
   ArrowLeft,
@@ -233,15 +234,18 @@ export default function PalpitePage() {
   }
 
   function shareWhatsApp(p: Prediction) {
+    analytics.trackWhatsAppShare(window.location.pathname, `${p.homeTeamName} x ${p.awayTeamName}`);
     window.open(`https://wa.me/?text=${encodeURIComponent(getShareText(p))}`, '_blank');
   }
 
   function shareTelegram(p: Prediction) {
+    analytics.trackTelegramShare(window.location.pathname, `${p.homeTeamName} x ${p.awayTeamName}`);
     const url = `https://www.mestredarodada.com.br/palpite/${slug}`;
     window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(getShareText(p))}`, '_blank');
   }
 
   function shareFacebook() {
+    analytics.trackFacebookShare(window.location.pathname);
     const url = `https://www.mestredarodada.com.br/palpite/${slug}`;
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
   }
@@ -482,6 +486,7 @@ export default function PalpitePage() {
           href="https://1wrlst.com/?open=register&p=c2f3"
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${p.homeTeamName} x ${p.awayTeamName}`)}
           className="block bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-2xl p-5 hover:border-green-500/60 transition-all duration-200 group"
         >
           <div className="flex items-center justify-between">

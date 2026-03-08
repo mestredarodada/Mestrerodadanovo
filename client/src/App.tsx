@@ -11,8 +11,13 @@ import PoliticaDePrivacidade from "./pages/PoliticaDePrivacidade";
 import FAQ from "./pages/FAQ";
 import Blog from "./pages/Blog";
 import PalpitePage from "./pages/PalpitePage";
+import Analytics from "./pages/Analytics";
+import { usePageTracking } from "./hooks/useAnalytics";
 
 function Router() {
+  // Rastreia pageviews automaticamente em cada mudança de rota
+  usePageTracking();
+
   return (
     <Switch>
       <Route path="/" component={Home} />
@@ -22,6 +27,7 @@ function Router() {
       <Route path="/jogue-com-responsabilidade" component={JogueComResponsabilidade} />
       <Route path="/termos-de-uso" component={TermosDeUso} />
       <Route path="/politica-de-privacidade" component={PoliticaDePrivacidade} />
+      <Route path="/analytics" component={Analytics} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -3,6 +3,7 @@ import { createServer } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import apiRouter from "./routes/predictions"; // Importar as rotas da API
+import analyticsRouter from "./routes/analytics"; // Rotas de analytics
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,6 +11,9 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // Middleware para parsear JSON
+  app.use(express.json());
 
   // tRPC API (usado pelo Admin)
   const { appRouter } = await import("./routers");
@@ -26,6 +30,7 @@ async function startServer() {
 
   // API REST Routes (DEVE estar ANTES do catch-all para não ser interceptado)
   app.use("/api/predictions", apiRouter);
+  app.use("/api/analytics", analyticsRouter);
 
   // Serve static files from dist/public in production
   const staticPath =

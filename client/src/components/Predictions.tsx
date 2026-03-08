@@ -1,4 +1,5 @@
 import { trpc } from '@/lib/trpc';
+import { analytics } from '@/hooks/useAnalytics';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import { Link } from 'wouter';
@@ -123,6 +124,7 @@ function ShareButtons({ prediction }: { prediction: any }) {
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => analytics.trackWhatsAppShare(window.location.pathname, `${home} x ${away}`)}
           className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90"
           style={{ backgroundColor: '#25D366' }}
           title="Compartilhar no WhatsApp"
@@ -138,6 +140,7 @@ function ShareButtons({ prediction }: { prediction: any }) {
           href={telegramUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => analytics.trackTelegramShare(window.location.pathname, `${home} x ${away}`)}
           className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90"
           style={{ backgroundColor: '#229ED9' }}
           title="Compartilhar no Telegram"
@@ -153,6 +156,7 @@ function ShareButtons({ prediction }: { prediction: any }) {
           href={facebookUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => analytics.trackFacebookShare(window.location.pathname, `${home} x ${away}`)}
           className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90"
           style={{ backgroundColor: '#1877F2' }}
           title="Compartilhar no Facebook"
@@ -343,6 +347,7 @@ function PredictionCard({ prediction }: { prediction: any }) {
           href={AFFILIATE_LINK}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${prediction.homeTeamName} x ${prediction.awayTeamName}`)}
           className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 text-white font-bold text-sm rounded-xl py-3 px-4 transition-all duration-200 shadow-md hover:shadow-orange-300/40 dark:hover:shadow-orange-900/40"
         >
           <ExternalLink size={15} />
