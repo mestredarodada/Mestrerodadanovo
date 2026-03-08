@@ -10,6 +10,7 @@ import TermosDeUso from "./pages/TermosDeUso";
 import PoliticaDePrivacidade from "./pages/PoliticaDePrivacidade";
 import FAQ from "./pages/FAQ";
 import Blog from "./pages/Blog";
+import PalpitePage from "./pages/PalpitePage";
 
 function Router() {
   return (
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/faq" component={FAQ} />
       <Route path="/blog" component={Blog} />
+      <Route path="/palpite/:slug" component={PalpitePage} />
       <Route path="/jogue-com-responsabilidade" component={JogueComResponsabilidade} />
       <Route path="/termos-de-uso" component={TermosDeUso} />
       <Route path="/politica-de-privacidade" component={PoliticaDePrivacidade} />
