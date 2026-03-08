@@ -266,10 +266,10 @@ function SectionHeader({ item }: { item: NavItem }) {
           <Icon size={20} className="text-white" />
         </div>
         <div>
-          <h2 className="font-poppins font-black text-xl text-white leading-tight">
+          <h2 className="font-poppins font-black text-xl text-foreground leading-tight">
             {item.label}
           </h2>
-          <p className="text-sm text-slate-400">{item.description}</p>
+          <p className="text-sm text-muted-foreground">{item.description}</p>
         </div>
         {item.badge && (
           <span className="ml-2 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
@@ -421,7 +421,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0d1117]">
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 dark:from-slate-950 dark:via-blue-950/10 dark:to-slate-950">
 
       {/* ── Sidebar (desktop) ── */}
       <Sidebar
@@ -435,38 +435,38 @@ export default function Home() {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* ── Top Bar (mobile) ── */}
-        <header className="md:hidden sticky top-0 z-40 bg-[#0f172a]/95 backdrop-blur-xl border-b border-white/10 shadow-sm">
+        <header className="md:hidden sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-border/60 shadow-sm">
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2.5">
               <img src="/logo.png" alt="Mestre da Rodada" className="w-9 h-9 object-contain" />
               <div>
-                <p className="font-poppins font-black text-sm text-white leading-none">Mestre da Rodada</p>
-                <p className="text-[10px] text-slate-400">Brasileirão 2026</p>
+                <p className="font-poppins font-black text-sm text-foreground leading-none">Mestre da Rodada</p>
+                <p className="text-[10px] text-muted-foreground">Brasileirão 2026</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-800 rounded-full px-2.5 py-1">
+              <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-full px-2.5 py-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-semibold text-emerald-400">Ao vivo</span>
+                <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">Ao vivo</span>
               </div>
             </div>
           </div>
         </header>
 
         {/* ── Desktop Top Bar ── */}
-        <header className="hidden md:flex sticky top-0 z-30 bg-[#0f172a]/90 backdrop-blur-xl border-b border-white/10 shadow-sm items-center justify-between px-6 py-3">
+        <header className="hidden md:flex sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-border/60 shadow-sm items-center justify-between px-6 py-3">
           <div className="flex items-center gap-3">
             <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${currentNav.gradient} flex items-center justify-center shadow-md`}>
               <currentNav.icon size={16} className="text-white" />
             </div>
             <div>
-              <h1 className="font-poppins font-black text-base text-white leading-none">{currentNav.label}</h1>
-              <p className="text-xs text-slate-400 mt-0.5">{currentNav.description}</p>
+              <h1 className="font-poppins font-black text-base text-foreground leading-none">{currentNav.label}</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">{currentNav.description}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-emerald-950/40 border border-emerald-800 rounded-full px-3 py-1.5">
+          <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-full px-3 py-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-semibold text-emerald-400">Dados em tempo real</span>
+            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Dados em tempo real</span>
           </div>
         </header>
 
@@ -548,30 +548,30 @@ export default function Home() {
         </main>
 
         {/* ── Footer ── */}
-        <footer className="border-t border-white/10 px-4 md:px-6 py-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+        <footer className="border-t border-border/60 px-4 md:px-6 py-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
               <img src="/logo.png" alt="Mestre da Rodada" className="w-5 h-5 object-contain opacity-60" />
               <span>Mestre da Rodada © 2026 — Palpites por IA, 100% grátis</span>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4">
-              <a href="/faq" className="hover:text-white transition-colors hover:underline">
+              <a href="/faq" className="hover:text-foreground transition-colors hover:underline">
                 FAQ
               </a>
               <span className="hidden md:inline opacity-30">|</span>
-              <a href="/blog" className="hover:text-white transition-colors hover:underline">
+              <a href="/blog" className="hover:text-foreground transition-colors hover:underline">
                 Blog
               </a>
               <span className="hidden md:inline opacity-30">|</span>
-              <a href="/jogue-com-responsabilidade" className="hover:text-white transition-colors hover:underline">
+              <a href="/jogue-com-responsabilidade" className="hover:text-foreground transition-colors hover:underline">
                 Jogue com Responsabilidade
               </a>
               <span className="hidden md:inline opacity-30">|</span>
-              <a href="/termos-de-uso" className="hover:text-white transition-colors hover:underline">
+              <a href="/termos-de-uso" className="hover:text-foreground transition-colors hover:underline">
                 Termos de Uso
               </a>
               <span className="hidden md:inline opacity-30">|</span>
-              <a href="/politica-de-privacidade" className="hover:text-white transition-colors hover:underline">
+              <a href="/politica-de-privacidade" className="hover:text-foreground transition-colors hover:underline">
                 Política de Privacidade
               </a>
               <span className="hidden md:inline opacity-30">|</span>
@@ -580,7 +580,7 @@ export default function Home() {
               <span className="hidden md:inline">IA: Groq Llama 3.3</span>
             </div>
           </div>
-          <p className="text-center text-[10px] text-slate-500 mt-3">
+          <p className="text-center text-[10px] text-muted-foreground/50 mt-3">
             Os palpites são gerados por Inteligência Artificial e têm caráter exclusivamente informativo. Aposte com responsabilidade. +18.
           </p>
         </footer>
