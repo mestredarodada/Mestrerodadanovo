@@ -132,7 +132,22 @@ async function fetchNextMatchWithoutPrediction(): Promise<any | null> {
     return null;
   }
 
-  for (const match of scheduledMatches) {
+  // Limita geração às 2 próximas rodadas apenas
+  // Encontra o menor matchday disponível (rodada atual/em andamento)
+  const matchdays = scheduledMatches
+    .map((m: any) => m.matchday)
+    .filter((d: any) => d != null)
+    .sort((a: number, b: number) => a - b);
+  const minMatchday = matchdays[0] ?? 0;
+  const maxAllowedMatchday = minMatchday + 1; // rodada atual + próxima
+
+  const allowedMatches = scheduledMatches.filter(
+    (m: any) => m.matchday == null || m.matchday <= maxAllowedMatchday
+  );
+
+  console.log(`[Mestre] Gerando palpites apenas para rodadas ${minMatchday} e ${maxAllowedMatchday} (${allowedMatches.length} jogos permitidos)`);
+
+  for (const match of allowedMatches) {
     const existing = await db
       .select({ id: predictionsSimple.id, createdAt: predictionsSimple.createdAt })
       .from(predictionsSimple)

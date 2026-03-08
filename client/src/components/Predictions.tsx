@@ -316,8 +316,13 @@ export function Predictions() {
     return Array.from(map.entries()).sort(([a], [b]) => Number(b) - Number(a));
   }, [predictions]);
 
-  const latestRound = grouped[0]?.[0] ?? 0;
-  const [selectedRound, setSelectedRound] = useState<number | string>(latestRound);
+  // Rodada mais baixa = rodada em andamento (menor número = mais próxima)
+  const rounds = grouped.map(([r]) => Number(r)).filter(r => r > 0).sort((a, b) => a - b);
+  const minRound = rounds[0] ?? 0;
+  const maxRound = rounds[rounds.length - 1] ?? 0;
+  // Seleciona a rodada mais recente (menor número = mais próxima dos jogos atuais)
+  const latestRound = grouped[grouped.length - 1]?.[0] ?? grouped[0]?.[0] ?? 0;
+  const [selectedRound, setSelectedRound] = useState<number | string>(minRound || latestRound);
 
   const currentPredictions = useMemo(() => {
     return grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
@@ -406,24 +411,36 @@ export function Predictions() {
       </div>
 
       {/* Submenu de rodadas */}
-      {grouped.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {grouped.map(([round, preds]) => (
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+        {grouped.map(([round, preds]) => {
+          const roundNum = Number(round);
+          const isMin = roundNum === minRound && minRound > 0;
+          const label = roundNum === 0
+            ? 'Sem rodada'
+            : isMin
+              ? '🟢 Rodada em Andamento'
+              : `📅 Próximas Rodadas`;
+          const isSelected = selectedRound === round;
+          return (
             <button
               key={round}
               onClick={() => setSelectedRound(round)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                selectedRound === round
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm border ${
+                isSelected
+                  ? isMin
+                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-emerald-500/30'
+                    : 'bg-primary text-primary-foreground border-primary shadow-primary/30'
+                  : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
               }`}
             >
-              {Number(round) > 0 ? `Rodada ${round}` : 'Sem rodada'}
-              <span className="ml-1.5 opacity-70">({preds.length})</span>
+              {label}
+              <span className={`ml-2 text-xs font-normal ${
+                isSelected ? 'opacity-80' : 'opacity-50'
+              }`}>({preds.length})</span>
             </button>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
       {/* Cards da rodada selecionada */}
       <AnimatePresence mode="wait">
