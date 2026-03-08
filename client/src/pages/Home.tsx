@@ -545,17 +545,33 @@ export default function Home() {
         </main>
 
         {/* ── Footer ── */}
-        <footer className="hidden md:block border-t border-border/60 px-6 py-4">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <footer className="border-t border-border/60 px-4 md:px-6 py-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
               <img src="/logo.png" alt="Mestre da Rodada" className="w-5 h-5 object-contain opacity-60" />
-              <span>Mestre da Rodada © 2026</span>
+              <span>Mestre da Rodada © 2026 — Palpites por IA, 100% grátis</span>
             </div>
-            <div className="flex items-center gap-4">
-              <span>Dados: football-data.org</span>
-              <span>IA: Groq Llama 3.3</span>
+            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4">
+              <a href="/jogue-com-responsabilidade" className="hover:text-foreground transition-colors hover:underline">
+                Jogue com Responsabilidade
+              </a>
+              <span className="hidden md:inline opacity-30">|</span>
+              <a href="/termos-de-uso" className="hover:text-foreground transition-colors hover:underline">
+                Termos de Uso
+              </a>
+              <span className="hidden md:inline opacity-30">|</span>
+              <a href="/politica-de-privacidade" className="hover:text-foreground transition-colors hover:underline">
+                Política de Privacidade
+              </a>
+              <span className="hidden md:inline opacity-30">|</span>
+              <span className="hidden md:inline">Dados: football-data.org</span>
+              <span className="hidden md:inline opacity-30">|</span>
+              <span className="hidden md:inline">IA: Groq Llama 3.3</span>
             </div>
           </div>
+          <p className="text-center text-[10px] text-muted-foreground/50 mt-3">
+            Os palpites são gerados por Inteligência Artificial e têm caráter exclusivamente informativo. Aposte com responsabilidade. +18.
+          </p>
         </footer>
       </div>
 
