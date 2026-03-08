@@ -52,7 +52,7 @@ function startCleanupJob() {
       const database = getDb();
       const result = await database.execute(sql`
         DELETE FROM predictions_simple
-        WHERE created_at < NOW() - INTERVAL '7 days'
+        WHERE created_at < NOW() - INTERVAL '14 days'
       `);
       console.log('[CleanupJob] 🗑️ Palpites antigos removidos com sucesso.');
     } catch (err: any) {
