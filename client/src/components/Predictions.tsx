@@ -320,6 +320,8 @@ export function Predictions() {
   // Rodada mais baixa = rodada em andamento (menor número = mais próxima)
   // grouped já está ordenado crescente, então o primeiro item é a rodada mais próxima
   const firstRoundKey = grouped[0]?.[0] ?? 0;
+  const rounds = grouped.map(([r]) => Number(r)).filter(r => r > 0).sort((a, b) => a - b);
+  const minRound = rounds[0] ?? 0;
   const [selectedRound, setSelectedRound] = useState<number | string>(firstRoundKey);
 
   // Sincroniza a seleção quando os dados carregam (caso o estado inicial seja 0)
