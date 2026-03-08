@@ -172,8 +172,31 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
 
 export function AIResults() {
   const { data: results, isLoading, error } = trpc.football.aiResults.useQuery(undefined, {
-    refetchInterval: 5 * 60 * 1000, // atualiza a cada 5 min
+    refetchInterval: 5 * 60 * 1000,
   });
+
+  // Hooks DEVEM vir antes de qualquer return condicional
+  const grouped = useMemo(() => {
+    if (!results || results.length === 0) return [];
+    const map = new Map<number | string, any[]>();
+    for (const r of results) {
+      const key = r.matchday ?? 0;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(r);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => Number(b) - Number(a));
+  }, [results]);
+
+  const latestRound = grouped[0]?.[0] ?? 0;
+  const [selectedRound, setSelectedRound] = useState<number | string>(latestRound);
+
+  const currentResults = useMemo(() => {
+    return grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
+  }, [grouped, selectedRound]);
+
+  const totalHits = useMemo(() => (results || []).reduce((acc: number, r: any) => acc + r.hitCount, 0), [results]);
+  const totalChecked = useMemo(() => (results || []).reduce((acc: number, r: any) => acc + r.totalChecked, 0), [results]);
+  const globalRate = totalChecked > 0 ? Math.round((totalHits / totalChecked) * 100) : 0;
 
   if (isLoading) {
     return (
@@ -209,29 +232,6 @@ export function AIResults() {
       </div>
     );
   }
-
-  // Agrupa por rodada
-  const grouped = useMemo(() => {
-    const map = new Map<number | string, any[]>();
-    for (const r of results) {
-      const key = r.matchday ?? 0;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(r);
-    }
-    return Array.from(map.entries()).sort(([a], [b]) => Number(b) - Number(a));
-  }, [results]);
-
-  const latestRound = grouped[0]?.[0] ?? 0;
-  const [selectedRound, setSelectedRound] = useState<number | string>(latestRound);
-
-  const currentResults = useMemo(() => {
-    return grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
-  }, [grouped, selectedRound]);
-
-  // Estatísticas gerais (todos os jogos)
-  const totalHits = results.reduce((acc: number, r: any) => acc + r.hitCount, 0);
-  const totalChecked = results.reduce((acc: number, r: any) => acc + r.totalChecked, 0);
-  const globalRate = totalChecked > 0 ? Math.round((totalHits / totalChecked) * 100) : 0;
 
   return (
     <div>

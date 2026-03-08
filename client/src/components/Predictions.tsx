@@ -304,6 +304,25 @@ export function Predictions() {
     staleTime: 2 * 60 * 1000,
   });
 
+  // Hooks DEVEM vir antes de qualquer return condicional (regra dos Hooks do React)
+  const grouped = useMemo(() => {
+    if (!predictions || predictions.length === 0) return [];
+    const map = new Map<number | string, any[]>();
+    for (const p of predictions) {
+      const key = p.matchday ?? 0;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => Number(b) - Number(a));
+  }, [predictions]);
+
+  const latestRound = grouped[0]?.[0] ?? 0;
+  const [selectedRound, setSelectedRound] = useState<number | string>(latestRound);
+
+  const currentPredictions = useMemo(() => {
+    return grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
+  }, [grouped, selectedRound]);
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -363,25 +382,6 @@ export function Predictions() {
       </div>
     );
   }
-
-  // Agrupa palpites por rodada
-  const grouped = useMemo(() => {
-    const map = new Map<number | string, any[]>();
-    for (const p of predictions) {
-      const key = p.matchday ?? 0;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(p);
-    }
-    // Ordena rodadas em ordem decrescente (mais recente primeiro)
-    return Array.from(map.entries()).sort(([a], [b]) => Number(b) - Number(a));
-  }, [predictions]);
-
-  const latestRound = grouped[0]?.[0] ?? 0;
-  const [selectedRound, setSelectedRound] = useState<number | string>(latestRound);
-
-  const currentPredictions = useMemo(() => {
-    return grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
-  }, [grouped, selectedRound]);
 
   return (
     <div className="space-y-4">
