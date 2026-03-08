@@ -321,7 +321,7 @@ export function Predictions() {
   const rounds = grouped.map(([r]) => Number(r)).filter(r => r > 0).sort((a, b) => a - b);
   const minRound = rounds[0] ?? 0;
   // Seleciona a rodada em andamento (menor número) por padrão
-  const [selectedRound, setSelectedRound] = useState<number | string>(minRound || grouped[0]?.[0] ?? 0);
+  const [selectedRound, setSelectedRound] = useState<number | string>(minRound || (grouped[0]?.[0] ?? 0));
 
   const currentPredictions = useMemo(() => {
     return grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
