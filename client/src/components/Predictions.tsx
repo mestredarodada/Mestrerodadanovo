@@ -92,7 +92,7 @@ function ShareButtons({ prediction }: { prediction: any }) {
   const bts = prediction.bothTeamsToScore === 'YES' ? '\n🎯 Ambas marcam: SIM' : prediction.bothTeamsToScore === 'NO' ? '\n🎯 Ambas marcam: NÃO' : '';
   const extra = prediction.extraTip ? `\n⭐ Melhor aposta: ${prediction.extraTip}` : '';
 
-  const text = `🤖 *Palpite do Mestre da Rodada*\n\n⚽ ${home} x ${away}\n📊 Resultado: *${main.text}*${score}${goals}${bts}${extra}\n\n🏆 Casa recomendada para apostar com as melhores Odds:\n${AFFILIATE_LINK}\n\n🔗 Mais palpites grátis por IA:\n${SITE_URL}`;
+  const text = `🤖 *Palpite do Mestre da Rodada*\n\n⚽ ${home} x ${away}\n📊 Resultado: *${main.text}*${score}${goals}${bts}${extra}\n\n🏆 Casa recomendada para apostar com as melhores Odds:\n${AFFILIATE_LINK}\n\n🔗 Mais palpites grátis por IA:\n${SITE_URL} \u2014 Palpites feitos por intelig\u00eancia artificial 100% gr\u00e1tis para voc\u00ea.`;
 
   const encoded = encodeURIComponent(text);
   const urlEncoded = encodeURIComponent(SITE_URL);
