@@ -17,6 +17,7 @@ import RecentResults from '@/components/RecentResults';
 import { Predictions } from '@/components/Predictions';
 import { LiveMatches } from '@/components/LiveMatches';
 import { AIResults } from '@/components/AIResults';
+import { MatchTicker } from '@/components/MatchTicker';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type Section = 'predictions' | 'live' | 'ai-results' | 'standings' | 'upcoming' | 'results';
@@ -480,7 +481,10 @@ export default function Home() {
                 exit={{ opacity: 0, y: -16 }}
                 transition={{ duration: 0.3 }}
               >
+                <MatchTicker />
+              <div className="mt-4">
                 <HeroBanner onSelect={handleSelect} />
+              </div>
                 <SectionHeader item={currentNav} />
                 <Predictions />
               </motion.div>
