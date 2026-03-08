@@ -8,11 +8,15 @@ import Home from "./pages/Home";
 import JogueComResponsabilidade from "./pages/JogueComResponsabilidade";
 import TermosDeUso from "./pages/TermosDeUso";
 import PoliticaDePrivacidade from "./pages/PoliticaDePrivacidade";
+import FAQ from "./pages/FAQ";
+import Blog from "./pages/Blog";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/faq" component={FAQ} />
+      <Route path="/blog" component={Blog} />
       <Route path="/jogue-com-responsabilidade" component={JogueComResponsabilidade} />
       <Route path="/termos-de-uso" component={TermosDeUso} />
       <Route path="/politica-de-privacidade" component={PoliticaDePrivacidade} />

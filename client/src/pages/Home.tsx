@@ -556,6 +556,14 @@ export default function Home() {
               <span>Mestre da Rodada © 2026 — Palpites por IA, 100% grátis</span>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4">
+              <a href="/faq" className="hover:text-foreground transition-colors hover:underline">
+                FAQ
+              </a>
+              <span className="hidden md:inline opacity-30">|</span>
+              <a href="/blog" className="hover:text-foreground transition-colors hover:underline">
+                Blog
+              </a>
+              <span className="hidden md:inline opacity-30">|</span>
               <a href="/jogue-com-responsabilidade" className="hover:text-foreground transition-colors hover:underline">
                 Jogue com Responsabilidade
               </a>
