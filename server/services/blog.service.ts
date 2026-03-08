@@ -1,4 +1,4 @@
-import Groq from 'groq-sdk';
+import axios from 'axios';
 import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 
@@ -264,27 +264,36 @@ export async function generateBlogPost(): Promise<void> {
 
     console.log(`[BlogJob] 📝 Gerando artigo: "${articleType.title(currentRound)}"...`);
 
-    // Chama a IA para gerar o conteúdo
-    const groq = new Groq({ apiKey: GROQ_API_KEY_BLOG });
+    // Chama a IA para gerar o conteúdo via axios (OpenAI-compatible)
     const prompt = buildPrompt(articleType, currentRound, recentPredictions);
 
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-          content: 'Você é um jornalista esportivo especializado em futebol brasileiro e apostas esportivas. Escreva artigos ricos, bem formatados, com parágrafos curtos, subtítulos claros e linguagem acessível. Use Markdown para formatação.',
+    const groqResponse = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: 'Você é um jornalista esportivo especializado em futebol brasileiro e apostas esportivas. Escreva artigos ricos, bem formatados, com parágrafos curtos, subtítulos claros e linguagem acessível. Use Markdown para formatação.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${GROQ_API_KEY_BLOG}`,
+          'Content-Type': 'application/json',
         },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    });
+        timeout: 60000,
+      }
+    );
 
-    const content = completion.choices[0]?.message?.content;
+    const content = groqResponse.data?.choices?.[0]?.message?.content;
     if (!content || content.length < 200) {
       console.warn('[BlogJob] Conteúdo gerado muito curto ou vazio. Abortando.');
       return;
