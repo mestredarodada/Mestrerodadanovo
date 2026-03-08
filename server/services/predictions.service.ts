@@ -444,6 +444,12 @@ ${ai.justification || 'N/D'}
                 url: 'https://1wrlst.com/?open=register&p=c2f3',
               },
             ],
+            [
+              {
+                text: '⚽ Ver Todos os Palpites — mestredarodada.com.br',
+                url: 'https://www.mestredarodada.com.br',
+              },
+            ],
           ],
         },
       },

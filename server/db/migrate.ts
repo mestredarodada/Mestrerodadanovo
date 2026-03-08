@@ -128,6 +128,24 @@ export async function runMigrations() {
       console.warn('[Migrate] Aviso ao atualizar matchday:', matchdayErr instanceof Error ? matchdayErr.message : matchdayErr);
     }
 
+    // Cria a tabela blog_posts se não existir
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS blog_posts (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(500) NOT NULL,
+        slug VARCHAR(500) NOT NULL UNIQUE,
+        description TEXT NOT NULL DEFAULT '',
+        content TEXT NOT NULL,
+        reading_time INTEGER NOT NULL DEFAULT 5,
+        category VARCHAR(100) NOT NULL DEFAULT 'geral',
+        is_published BOOLEAN NOT NULL DEFAULT false,
+        published_at TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    console.log('[Migrate] Tabela blog_posts: OK');
+
     console.log('[Migrate] Migrações concluídas com sucesso!');
   } catch (error) {
     console.error('[Migrate] Erro nas migrações:', error instanceof Error ? error.message : error);

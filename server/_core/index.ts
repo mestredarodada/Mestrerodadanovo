@@ -10,6 +10,7 @@ import { serveStatic, setupVite } from "./vite";
 import apiRouter from "../routes/predictions";
 import { runMigrations } from "../db/migrate";
 import { generateNextPrediction } from "../services/predictions.service";
+import { startBlogJob } from "../services/blog.service";
 
 // ─── Job de geração sequencial de palpites ────────────────────────────────────
 // Gera 1 palpite a cada 10 minutos, respeitando o rate limit da API gratuita.
@@ -134,6 +135,46 @@ async function startServer() {
   // REST API pública de palpites
   app.use("/api/predictions", apiRouter);
 
+  // REST API pública de blog
+  app.get("/api/blog", async (_req, res) => {
+    try {
+      const { getDb } = await import('../db');
+      const { sql } = await import('drizzle-orm');
+      const database = getDb();
+      const result = await database.execute(sql`
+        SELECT id, title, slug, description, reading_time, category, published_at, created_at
+        FROM blog_posts
+        WHERE is_published = true
+        ORDER BY created_at DESC
+        LIMIT 50
+      `);
+      const rows = result.rows || result as any[];
+      res.json({ posts: rows });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/blog/:slug", async (req, res) => {
+    try {
+      const { getDb } = await import('../db');
+      const { sql } = await import('drizzle-orm');
+      const database = getDb();
+      const result = await database.execute(sql`
+        SELECT * FROM blog_posts
+        WHERE slug = ${req.params.slug} AND is_published = true
+        LIMIT 1
+      `);
+      const rows = result.rows || result as any[];
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Artigo não encontrado' });
+      }
+      res.json({ post: rows[0] });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // Sitemap dinâmico de palpites (acessível em /sitemap-predictions.xml)
   app.get("/sitemap-predictions.xml", async (_req, res) => {
     try {
@@ -185,7 +226,9 @@ async function startServer() {
     startPredictionJob();
     // 3. Inicia a limpeza automática de palpites com +7 dias
     startCleanupJob();
-    // 4. Inicia o keep-alive para evitar hibernação do Render
+    // 4. Inicia o job de geração automática de artigos de blog
+    startBlogJob();
+    // 5. Inicia o keep-alive para evitar hibernação do Render
     startKeepAlive(port);
   });
 }

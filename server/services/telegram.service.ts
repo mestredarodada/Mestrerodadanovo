@@ -96,6 +96,22 @@ ${escapeMarkdown(prediction.justification)}
         chat_id: TELEGRAM_CHAT_ID,
         text: message,
         parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: '🎲 Apostar Agora — Casa Recomendada',
+                url: 'https://1wrlst.com/?open=register&p=c2f3',
+              },
+            ],
+            [
+              {
+                text: '⚽ Ver Todos os Palpites — mestredarodada.com.br',
+                url: 'https://www.mestredarodada.com.br',
+              },
+            ],
+          ],
+        },
       }
     );
 
