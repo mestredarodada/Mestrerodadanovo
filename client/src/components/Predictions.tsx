@@ -313,16 +313,15 @@ export function Predictions() {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(p);
     }
-    return Array.from(map.entries()).sort(([a], [b]) => Number(b) - Number(a));
+    // Ordena em ordem CRESCENTE: rodada menor (em andamento) primeiro
+    return Array.from(map.entries()).sort(([a], [b]) => Number(a) - Number(b));
   }, [predictions]);
 
   // Rodada mais baixa = rodada em andamento (menor número = mais próxima)
   const rounds = grouped.map(([r]) => Number(r)).filter(r => r > 0).sort((a, b) => a - b);
   const minRound = rounds[0] ?? 0;
-  const maxRound = rounds[rounds.length - 1] ?? 0;
-  // Seleciona a rodada mais recente (menor número = mais próxima dos jogos atuais)
-  const latestRound = grouped[grouped.length - 1]?.[0] ?? grouped[0]?.[0] ?? 0;
-  const [selectedRound, setSelectedRound] = useState<number | string>(minRound || latestRound);
+  // Seleciona a rodada em andamento (menor número) por padrão
+  const [selectedRound, setSelectedRound] = useState<number | string>(minRound || grouped[0]?.[0] ?? 0);
 
   const currentPredictions = useMemo(() => {
     return grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
