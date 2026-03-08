@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import apiRouter from "../routes/predictions";
+import analyticsRouter from "../routes/analytics";
 import { runMigrations } from "../db/migrate";
 import { generateNextPrediction } from "../services/predictions.service";
 import { startBlogJob } from "../services/blog.service";
@@ -134,6 +135,9 @@ async function startServer() {
 
   // REST API pública de palpites
   app.use("/api/predictions", apiRouter);
+
+  // REST API de analytics (rastreamento de visitas e cliques)
+  app.use("/api/analytics", analyticsRouter);
 
   // REST API pública de blog
   app.get("/api/blog", async (_req, res) => {
