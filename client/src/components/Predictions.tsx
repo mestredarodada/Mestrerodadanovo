@@ -318,14 +318,16 @@ export function Predictions() {
   }, [predictions]);
 
   // Rodada mais baixa = rodada em andamento (menor número = mais próxima)
-  const rounds = grouped.map(([r]) => Number(r)).filter(r => r > 0).sort((a, b) => a - b);
-  const minRound = rounds[0] ?? 0;
-  // Seleciona a rodada em andamento (menor número) por padrão
-  const [selectedRound, setSelectedRound] = useState<number | string>(minRound || (grouped[0]?.[0] ?? 0));
+  // grouped já está ordenado crescente, então o primeiro item é a rodada mais próxima
+  const firstRoundKey = grouped[0]?.[0] ?? 0;
+  const [selectedRound, setSelectedRound] = useState<number | string>(firstRoundKey);
+
+  // Sincroniza a seleção quando os dados carregam (caso o estado inicial seja 0)
+  const effectiveRound = grouped.find(([r]) => r === selectedRound) ? selectedRound : firstRoundKey;
 
   const currentPredictions = useMemo(() => {
-    return grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
-  }, [grouped, selectedRound]);
+    return grouped.find(([r]) => r === effectiveRound)?.[1] ?? [];
+  }, [grouped, effectiveRound]);
 
   if (isLoading) {
     return (
@@ -419,7 +421,7 @@ export function Predictions() {
             : isMin
               ? '🟢 Rodada em Andamento'
               : `📅 Próximas Rodadas`;
-          const isSelected = selectedRound === round;
+          const isSelected = effectiveRound === round;
           return (
             <button
               key={round}
@@ -444,7 +446,7 @@ export function Predictions() {
       {/* Cards da rodada selecionada */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={String(selectedRound)}
+          key={String(effectiveRound)}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
