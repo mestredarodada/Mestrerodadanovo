@@ -1,4 +1,5 @@
 import { trpc } from '@/lib/trpc';
+import { useIsAppWebView, isAppWebView } from '@/hooks/useIsAppWebView';
 import { analytics } from '@/hooks/useAnalytics';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMemo, useState } from 'react';
@@ -103,7 +104,9 @@ function ShareButtons({ prediction }: { prediction: any }) {
   const bts = prediction.bothTeamsToScore === 'YES' ? '\n🎯 Ambas marcam: SIM' : prediction.bothTeamsToScore === 'NO' ? '\n🎯 Ambas marcam: NÃO' : '';
   const extra = prediction.extraTip ? `\n⭐ Melhor aposta: ${prediction.extraTip}` : '';
 
-  const text = `🤖 *Palpite do Mestre da Rodada*\n\n⚽ ${home} x ${away}\n📊 Resultado: *${main.text}*${score}${goals}${bts}${extra}\n\n🏆 Casa recomendada para apostar com as melhores Odds:\n${AFFILIATE_LINK}\n\n🔗 Mais palpites grátis por IA:\n${SITE_URL} \u2014 Palpites feitos por intelig\u00eancia artificial 100% gr\u00e1tis para voc\u00ea.`;
+  // No app, remove link de afiliado do texto de compartilhamento
+  const affiliateBlock = isAppWebView() ? '' : `\n\n🏆 Casa recomendada para apostar com as melhores Odds:\n${AFFILIATE_LINK}`;
+  const text = `🤖 *Palpite do Mestre da Rodada*\n\n⚽ ${home} x ${away}\n📊 Resultado: *${main.text}*${score}${goals}${bts}${extra}${affiliateBlock}\n\n🔗 Mais palpites grátis por IA:\n${SITE_URL} \u2014 Palpites feitos por intelig\u00eancia artificial 100% gr\u00e1tis para voc\u00ea.`;
 
   const encoded = encodeURIComponent(text);
   const urlEncoded = encodeURIComponent(SITE_URL);
@@ -197,6 +200,7 @@ function MarketItem({
 
 function PredictionCard({ prediction }: { prediction: any }) {
   const [expanded, setExpanded] = useState(false);
+  const isApp = useIsAppWebView();
 
   const home = prediction.homeTeamName || 'Time A';
   const away = prediction.awayTeamName || 'Time B';
@@ -341,20 +345,22 @@ function PredictionCard({ prediction }: { prediction: any }) {
         </div>
       )}
 
-      {/* Botão de afiliado */}
-      <div className="px-4 mb-3">
-        <a
-          href={AFFILIATE_LINK}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${prediction.homeTeamName} x ${prediction.awayTeamName}`)}
-          className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 text-white font-bold text-sm rounded-xl py-3 px-4 transition-all duration-200 shadow-md hover:shadow-orange-300/40 dark:hover:shadow-orange-900/40"
-        >
-          <ExternalLink size={15} />
-          <span>Faça sua aposta aqui</span>
-          <span className="text-orange-200 text-xs font-normal hidden sm:inline">(casa recomendada)</span>
-        </a>
-      </div>
+      {/* Botão de afiliado — oculto no app para conformidade com Google Play */}
+      {!isApp && (
+        <div className="px-4 mb-3">
+          <a
+            href={AFFILIATE_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${prediction.homeTeamName} x ${prediction.awayTeamName}`)}
+            className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 text-white font-bold text-sm rounded-xl py-3 px-4 transition-all duration-200 shadow-md hover:shadow-orange-300/40 dark:hover:shadow-orange-900/40"
+          >
+            <ExternalLink size={15} />
+            <span>Faça sua aposta aqui</span>
+            <span className="text-orange-200 text-xs font-normal hidden sm:inline">(casa recomendada)</span>
+          </a>
+        </div>
+      )}
 
       {/* Link para página individual do palpite */}
       <div className="px-4 mb-2">

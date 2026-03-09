@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { analytics } from '@/hooks/useAnalytics';
+import { useIsAppWebView, isAppWebView } from '@/hooks/useIsAppWebView';
 import { useParams, Link } from 'wouter';
 import {
   ArrowLeft,
@@ -129,6 +130,7 @@ export default function PalpitePage() {
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const isApp = useIsAppWebView();
 
   useEffect(() => {
     if (!slug) return;
@@ -230,7 +232,9 @@ export default function PalpitePage() {
 
   // Texto de compartilhamento
   function getShareText(p: Prediction): string {
-    return `🤖 *Palpite do Mestre da Rodada*\n\n⚽ ${p.homeTeamName} x ${p.awayTeamName}\n📊 Resultado: *${translatePrediction(p.mainPrediction)}*${p.likelyScore ? ` (${p.likelyScore})` : ''}\n⚽ Gols: ${translatePrediction(p.goalsPrediction)}\n🎯 Ambas marcam: ${p.bothTeamsToScore === 'YES' ? 'SIM' : 'NÃO'}${p.bestBet ? `\n⭐ Melhor aposta: ${p.bestBet}` : ''}\n\n🏆 Casa recomendada para apostar com as melhores Odds:\nhttps://1wrlst.com/?open=register&p=c2f3\n\n🔗 Mais palpites grátis por IA:\nwww.mestredarodada.com.br — Palpites feitos por inteligência artificial 100% grátis para você.`;
+    // No app, remove link de afiliado do texto de compartilhamento
+    const affiliateBlock = isAppWebView() ? '' : `\n\n🏆 Casa recomendada para apostar com as melhores Odds:\nhttps://1wrlst.com/?open=register&p=c2f3`;
+    return `🤖 *Palpite do Mestre da Rodada*\n\n⚽ ${p.homeTeamName} x ${p.awayTeamName}\n📊 Resultado: *${translatePrediction(p.mainPrediction)}*${p.likelyScore ? ` (${p.likelyScore})` : ''}\n⚽ Gols: ${translatePrediction(p.goalsPrediction)}\n🎯 Ambas marcam: ${p.bothTeamsToScore === 'YES' ? 'SIM' : 'NÃO'}${p.bestBet ? `\n⭐ Melhor aposta: ${p.bestBet}` : ''}${affiliateBlock}\n\n🔗 Mais palpites grátis por IA:\nwww.mestredarodada.com.br — Palpites feitos por inteligência artificial 100% grátis para você.`;
   }
 
   function shareWhatsApp(p: Prediction) {
@@ -481,23 +485,25 @@ export default function PalpitePage() {
           </div>
         )}
 
-        {/* ── Casa de Apostas ── */}
-        <a
-          href="https://1wrlst.com/?open=register&p=c2f3"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${p.homeTeamName} x ${p.awayTeamName}`)}
-          className="block bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-2xl p-5 hover:border-green-500/60 transition-all duration-200 group"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-green-400 font-semibold mb-1">🏆 Casa Recomendada</p>
-              <p className="text-white font-bold">Aposte com as melhores Odds</p>
-              <p className="text-slate-400 text-xs mt-1">Cadastre-se e aproveite os bônus de boas-vindas</p>
+        {/* ── Casa de Apostas — oculto no app para conformidade com Google Play ── */}
+        {!isApp && (
+          <a
+            href="https://1wrlst.com/?open=register&p=c2f3"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${p.homeTeamName} x ${p.awayTeamName}`)}
+            className="block bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-2xl p-5 hover:border-green-500/60 transition-all duration-200 group"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-green-400 font-semibold mb-1">🏆 Casa Recomendada</p>
+                <p className="text-white font-bold">Aposte com as melhores Odds</p>
+                <p className="text-slate-400 text-xs mt-1">Cadastre-se e aproveite os bônus de boas-vindas</p>
+              </div>
+              <ExternalLink className="w-5 h-5 text-green-400 group-hover:scale-110 transition-transform" />
             </div>
-            <ExternalLink className="w-5 h-5 text-green-400 group-hover:scale-110 transition-transform" />
-          </div>
-        </a>
+          </a>
+        )}
 
         {/* ── Botões de Compartilhar ── */}
         <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-5">
