@@ -372,8 +372,8 @@ function PredictionCard({ prediction }: { prediction: any }) {
         </Link>
       </div>
 
-      {/* Botões de compartilhamento */}
-      <ShareButtons prediction={prediction} />
+      {/* Botões de compartilhamento - oculto no app para evitar erro de conexão */}
+      {!isApp && <ShareButtons prediction={prediction} />}
 
       {/* Análise expansível */}
       {prediction.justification && (

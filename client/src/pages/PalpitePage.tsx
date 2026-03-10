@@ -505,8 +505,8 @@ export default function PalpitePage() {
           </a>
         )}
 
-        {/* ── Botões de Compartilhar ── */}
-        <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-5">
+        {/* ── Botões de Compartilhar - oculto no app para evitar erro de conexão ── */}
+        {!isApp && <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Share2 className="w-4 h-4 text-slate-400" />
             <span className="text-sm font-bold text-slate-300">Compartilhar este palpite</span>
@@ -534,7 +534,7 @@ export default function PalpitePage() {
               Facebook
             </button>
           </div>
-        </div>
+        </div>}
 
         {/* ── CTA Ver Mais Palpites ── */}
         <div className="text-center bg-gradient-to-br from-purple-900/30 to-pink-900/30 border border-purple-500/20 rounded-2xl p-6">
