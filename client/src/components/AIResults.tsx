@@ -1,7 +1,7 @@
 import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo, useEffect } from 'react';
-import { CheckCircle2, XCircle, MinusCircle, Trophy, TrendingUp, Brain, Share2 } from 'lucide-react';
+import { CheckCircle2, XCircle, MinusCircle, Trophy, TrendingUp, Brain, Share2, Copy, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -55,32 +55,59 @@ function AIShareButtons({ r, hitRate }: { r: any; hitRate: number }) {
 
   const isApp = isAppWebView();
 
-  // No app, usa Web Share API nativa do Android
-  const handleNativeShare = async () => {
+  const [copied, setCopied] = useState(false);
+
+  // No app, copia texto para área de transferência
+  const handleCopyShare = async () => {
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `Resultado: ${home} x ${away}`,
-          text: text,
-          url: SITE_URL,
-        });
-      }
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
     } catch (e) {
-      // Usuário cancelou ou erro - ignora
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
     }
   };
 
-  // No app, mostra botão único de compartilhar nativo
+  // No app, mostra botão de copiar + botão site oficial
   if (isApp) {
     return (
-      <div className="px-4 pb-4 pt-2 border-t border-border/40">
+      <div className="px-4 pb-4 pt-2 border-t border-border/40 space-y-2">
         <button
-          onClick={handleNativeShare}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90 bg-gradient-to-r from-emerald-500 to-teal-500"
+          onClick={handleCopyShare}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 ${
+            copied
+              ? 'bg-gradient-to-r from-emerald-600 to-emerald-700'
+              : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90'
+          }`}
+        >
+          {copied ? (
+            <>
+              <CheckCircle size={14} />
+              Copiado! Cole no WhatsApp ou Telegram
+            </>
+          ) : (
+            <>
+              <Copy size={14} />
+              Copiar resultado para compartilhar
+            </>
+          )}
+        </button>
+        <a
+          href={SITE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90 bg-gradient-to-r from-blue-500 to-indigo-500"
         >
           <Share2 size={14} />
-          Compartilhar resultado
-        </button>
+          Abrir site oficial
+        </a>
       </div>
     );
   }

@@ -21,6 +21,8 @@ import {
   CreditCard,
   BarChart3,
   Share2,
+  Copy,
+  CheckCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -110,33 +112,60 @@ function ShareButtons({ prediction }: { prediction: any }) {
   const text = `⚽ *${home} x ${away}*\n\n🤖 Palpite do Mestre da Rodada\n📊 *${main.text}*${score}${goals}${bts}${extra}${affiliateBlock}\n\n📲 Baixe o app oficial:\n${PLAYSTORE_LINK}\n\n🌐 ${SITE_URL}`;
 
   const isApp = isAppWebView();
+  const [copied, setCopied] = useState(false);
 
-  // No app, usa Web Share API nativa do Android
-  const handleNativeShare = async () => {
+  // No app, copia texto para área de transferência
+  const handleCopyShare = async () => {
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `Palpite: ${home} x ${away}`,
-          text: text,
-          url: SITE_URL,
-        });
-      }
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
     } catch (e) {
-      // Usuário cancelou ou erro - ignora
+      // Fallback para navegadores antigos
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
     }
   };
 
-  // No app, mostra botão único de compartilhar nativo
+  // No app, mostra botão de copiar + botão site oficial
   if (isApp) {
     return (
-      <div className="px-4 pb-4">
+      <div className="px-4 pb-4 space-y-2">
         <button
-          onClick={handleNativeShare}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90 bg-gradient-to-r from-emerald-500 to-teal-500"
+          onClick={handleCopyShare}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 ${
+            copied
+              ? 'bg-gradient-to-r from-emerald-600 to-emerald-700'
+              : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90'
+          }`}
         >
-          <Share2 size={14} />
-          Compartilhar palpite
+          {copied ? (
+            <>
+              <CheckCircle size={14} />
+              Copiado! Cole no WhatsApp ou Telegram
+            </>
+          ) : (
+            <>
+              <Copy size={14} />
+              Copiar palpite para compartilhar
+            </>
+          )}
         </button>
+        <a
+          href={SITE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90 bg-gradient-to-r from-blue-500 to-indigo-500"
+        >
+          <ExternalLink size={14} />
+          Abrir site oficial
+        </a>
       </div>
     );
   }
