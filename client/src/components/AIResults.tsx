@@ -172,6 +172,7 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
 
 export function AIResults() {
   const { data: results, isLoading, error } = trpc.football.aiResults.useQuery(undefined, {
+    staleTime: 0,
     refetchInterval: 5 * 60 * 1000,
   });
 
