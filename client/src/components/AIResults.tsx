@@ -1,6 +1,6 @@
 import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { CheckCircle2, XCircle, MinusCircle, Trophy, TrendingUp, Brain } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -191,8 +191,16 @@ export function AIResults() {
   const latestRound = grouped[0]?.[0] ?? 0;
   const [selectedRound, setSelectedRound] = useState<number | string>(latestRound);
 
+  // Sincroniza selectedRound quando latestRound muda (quando os dados carregam)
+  useEffect(() => {
+    if (latestRound !== 0 && selectedRound === 0) {
+      setSelectedRound(latestRound);
+    }
+  }, [latestRound, selectedRound]);
+
   const currentResults = useMemo(() => {
-    return grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
+    const results = grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
+    return results;
   }, [grouped, selectedRound]);
 
   const totalHits = useMemo(() => (results || []).reduce((acc: number, r: any) => acc + r.hitCount, 0), [results]);
