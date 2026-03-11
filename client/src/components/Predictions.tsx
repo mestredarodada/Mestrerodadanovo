@@ -157,15 +157,17 @@ function ShareButtons({ prediction }: { prediction: any }) {
             </>
           )}
         </button>
-        <a
-          href={SITE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={() => {
+            // Usa intent:// para forçar abrir no navegador externo do Android
+            const intentUrl = `intent://${SITE_URL.replace('https://', '')}#Intent;scheme=https;action=android.intent.action.VIEW;end`;
+            window.location.href = intentUrl;
+          }}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90 bg-gradient-to-r from-blue-500 to-indigo-500"
         >
           <ExternalLink size={14} />
           Abrir site oficial
-        </a>
+        </button>
       </div>
     );
   }
