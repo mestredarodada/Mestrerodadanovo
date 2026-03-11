@@ -504,7 +504,7 @@ export default function Home() {
                 transition={{ duration: 0.3 }}
               >
                 <SectionHeader item={currentNav} />
-                <LiveMatches />
+                <LiveMatches onViewPrediction={() => handleSelect('predictions')} />
               </motion.div>
             ) : activeSection === 'ai-results' ? (
               <motion.div

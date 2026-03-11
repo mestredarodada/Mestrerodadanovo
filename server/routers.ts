@@ -167,14 +167,21 @@ export const appRouter = router({
 
         const database = getDb();
 
-        // Busca jogos agendados e em andamento da API para obter datas corretas
-        // e identificar quais jogos já foram finalizados
+        // Busca jogos agendados, em andamento e finalizados da API
+        // Mantém palpites de jogos ao vivo e finalizados há menos de 1h
         let scheduledMatches: any[] = [];
-        let finishedMatchIds: Set<string> = new Set();
+        let inPlayMatchIds: Set<string> = new Set();
+        let recentlyFinishedIds: Set<string> = new Set();
+        let oldFinishedIds: Set<string> = new Set();
         try {
-          const [scheduledRes, finishedRes] = await Promise.all([
+          const [scheduledRes, inPlayRes, finishedRes] = await Promise.all([
             axios.get('https://api.football-data.org/v4/competitions/BSA/matches', {
               params: { status: 'SCHEDULED' },
+              headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY },
+              timeout: 10000,
+            }),
+            axios.get('https://api.football-data.org/v4/competitions/BSA/matches', {
+              params: { status: 'IN_PLAY,PAUSED' },
               headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY },
               timeout: 10000,
             }),
@@ -185,14 +192,31 @@ export const appRouter = router({
             }),
           ]);
           scheduledMatches = scheduledRes.data.matches || [];
-          const finished = finishedRes.data.matches || [];
-          finishedMatchIds = new Set(finished.map((m: any) => String(m.id)));
-          console.log(`[PREDICTIONS] API: ${scheduledMatches.length} agendados, ${finishedMatchIds.size} finalizados`);
+          const inPlayMatches = inPlayRes.data.matches || [];
+          const finishedMatches = finishedRes.data.matches || [];
+          
+          // Jogos ao vivo - manter palpites
+          inPlayMatchIds = new Set(inPlayMatches.map((m: any) => String(m.id)));
+          
+          // Jogos finalizados - separar recentes (< 5h) dos antigos
+          const now = Date.now();
+          const FIVE_HOURS = 5 * 60 * 60 * 1000;
+          for (const m of finishedMatches) {
+            const finishTime = new Date(m.utcDate).getTime() + (105 * 60 * 1000); // ~105min de jogo
+            if (now - finishTime < FIVE_HOURS) {
+              recentlyFinishedIds.add(String(m.id));
+            } else {
+              oldFinishedIds.add(String(m.id));
+            }
+          }
+          
+          console.log(`[PREDICTIONS] API: ${scheduledMatches.length} agendados, ${inPlayMatchIds.size} ao vivo, ${recentlyFinishedIds.size} finalizados recentes, ${oldFinishedIds.size} finalizados antigos`);
         } catch (apiErr) {
           console.warn('[PREDICTIONS] Erro ao buscar API football-data, usando dados do banco:', apiErr);
         }
 
         // Mapa de match_id -> dados da API (para corrigir datas e matchday)
+        // Inclui agendados e ao vivo
         const apiMatchMap = new Map<string, any>();
         for (const m of scheduledMatches) {
           apiMatchMap.set(String(m.id), m);
@@ -238,9 +262,10 @@ export const appRouter = router({
           }
         }
 
-        // Normaliza os campos e filtra jogos já finalizados
+        // Normaliza os campos e filtra apenas jogos finalizados há mais de 1h
+        // Mantém: agendados, ao vivo, e finalizados recentes (< 1h)
         const predictions = (result.rows || result as any[])
-          .filter((row: any) => !finishedMatchIds.has(String(row.match_id)))
+          .filter((row: any) => !oldFinishedIds.has(String(row.match_id)))
           .map((row: any) => {
             // Usa a data da API se disponível (mais confiável)
             const apiMatch = apiMatchMap.get(String(row.match_id));

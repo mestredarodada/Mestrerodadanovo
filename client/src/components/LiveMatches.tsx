@@ -1,12 +1,12 @@
 import { trpc } from '@/lib/trpc';
 import { motion } from 'framer-motion';
-import { Radio, Clock, XCircle } from 'lucide-react';
+import { Radio, Clock, XCircle, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 // ─── Card de jogo ao vivo ─────────────────────────────────────────────────────
 
-function LiveMatchCard({ match, index }: { match: any; index: number }) {
+function LiveMatchCard({ match, index, onViewPrediction }: { match: any; index: number; onViewPrediction?: () => void }) {
   const homeGoals = match.score?.fullTime?.home ?? match.score?.halfTime?.home ?? 0;
   const awayGoals = match.score?.fullTime?.away ?? match.score?.halfTime?.away ?? 0;
   const minute = match.minute ?? null;
@@ -81,6 +81,19 @@ function LiveMatchCard({ match, index }: { match: any; index: number }) {
         </div>
       </div>
 
+      {/* Botão Veja o palpite */}
+      {onViewPrediction && (
+        <div className="px-4 py-2 border-t border-border/40">
+          <button
+            onClick={onViewPrediction}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90 bg-gradient-to-r from-amber-500 to-orange-500"
+          >
+            <Sparkles size={13} />
+            Veja o palpite desta partida
+          </button>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="px-4 py-2 border-t border-border/40 bg-muted/30">
         <p className="text-[10px] text-muted-foreground text-center">
@@ -93,7 +106,7 @@ function LiveMatchCard({ match, index }: { match: any; index: number }) {
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
-export function LiveMatches() {
+export function LiveMatches({ onViewPrediction }: { onViewPrediction?: () => void } = {}) {
   const { data: matches, isLoading, error } = trpc.football.live.useQuery(undefined, {
     refetchInterval: 60 * 1000, // atualiza a cada 60 segundos
   });
@@ -169,7 +182,7 @@ export function LiveMatches() {
       {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {matches.map((match: any, i: number) => (
-          <LiveMatchCard key={match.id} match={match} index={i} />
+          <LiveMatchCard key={match.id} match={match} index={i} onViewPrediction={onViewPrediction} />
         ))}
       </div>
     </div>
