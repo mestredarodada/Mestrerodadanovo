@@ -413,8 +413,8 @@ function PredictionCard({ prediction }: { prediction: any }) {
 
 export function Predictions() {
   const { data: predictions, isLoading, error, refetch } = trpc.football.predictions.useQuery(undefined, {
+    staleTime: 0,
     refetchInterval: 5 * 60 * 1000,
-    staleTime: 2 * 60 * 1000,
   });
 
   // Hooks DEVEM vir antes de qualquer return condicional (regra dos Hooks do React)
