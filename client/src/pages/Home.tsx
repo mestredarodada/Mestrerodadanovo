@@ -17,6 +17,7 @@ import RecentResults from '@/components/RecentResults';
 import { Predictions } from '@/components/Predictions';
 import { LiveMatches } from '@/components/LiveMatches';
 import { AIResults } from '@/components/AIResults';
+import PlayStoreBanner from '@/components/PlayStoreBanner';
 
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -423,7 +424,12 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 dark:from-slate-950 dark:via-blue-950/10 dark:to-slate-950">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 dark:from-slate-950 dark:via-blue-950/10 dark:to-slate-950">
+
+      {/* ── Banner Play Store (topo) ── */}
+      <PlayStoreBanner />
+
+      <div className="flex flex-1">
 
       {/* ── Sidebar (desktop) ── */}
       <Sidebar
@@ -586,6 +592,8 @@ export default function Home() {
             Os palpites são gerados por Inteligência Artificial e têm caráter exclusivamente informativo. Aposte com responsabilidade. +18.
           </p>
         </footer>
+      </div>
+
       </div>
 
       {/* ── Mobile Bottom Nav ── */}
