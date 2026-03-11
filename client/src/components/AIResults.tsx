@@ -53,6 +53,39 @@ function AIShareButtons({ r, hitRate }: { r: any; hitRate: number }) {
 
   const text = `⚽ *${home} ${r.actualHomeGoals} x ${r.actualAwayGoals} ${away}*\n\n🤖 O que a IA previu:\n📊 Resultado: ${formatPrediction(r.mainPrediction, home, away)} ${resultText}\n${ratingEmoji} Desempenho: *${hitRate}%* de acerto\n\n🎰 Odds incríveis — Cadastre-se:\n${AFFILIATE_LINK}\n\n📲 Baixe o app oficial:\n${PLAYSTORE_LINK}\n\n🌐 ${SITE_URL}`;
 
+  const isApp = isAppWebView();
+
+  // No app, usa Web Share API nativa do Android
+  const handleNativeShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Resultado: ${home} x ${away}`,
+          text: text,
+          url: SITE_URL,
+        });
+      }
+    } catch (e) {
+      // Usuário cancelou ou erro - ignora
+    }
+  };
+
+  // No app, mostra botão único de compartilhar nativo
+  if (isApp) {
+    return (
+      <div className="px-4 pb-4 pt-2 border-t border-border/40">
+        <button
+          onClick={handleNativeShare}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90 bg-gradient-to-r from-emerald-500 to-teal-500"
+        >
+          <Share2 size={14} />
+          Compartilhar resultado
+        </button>
+      </div>
+    );
+  }
+
+  // No navegador, mostra botões individuais
   const encoded = encodeURIComponent(text);
   const urlEncoded = encodeURIComponent(SITE_URL);
 

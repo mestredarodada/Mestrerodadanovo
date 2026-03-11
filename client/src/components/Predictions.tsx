@@ -109,6 +109,39 @@ function ShareButtons({ prediction }: { prediction: any }) {
   const affiliateBlock = `\n\n🎰 Odds incríveis — Cadastre-se:\n${AFFILIATE_LINK}`;
   const text = `⚽ *${home} x ${away}*\n\n🤖 Palpite do Mestre da Rodada\n📊 *${main.text}*${score}${goals}${bts}${extra}${affiliateBlock}\n\n📲 Baixe o app oficial:\n${PLAYSTORE_LINK}\n\n🌐 ${SITE_URL}`;
 
+  const isApp = isAppWebView();
+
+  // No app, usa Web Share API nativa do Android
+  const handleNativeShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Palpite: ${home} x ${away}`,
+          text: text,
+          url: SITE_URL,
+        });
+      }
+    } catch (e) {
+      // Usuário cancelou ou erro - ignora
+    }
+  };
+
+  // No app, mostra botão único de compartilhar nativo
+  if (isApp) {
+    return (
+      <div className="px-4 pb-4">
+        <button
+          onClick={handleNativeShare}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90 bg-gradient-to-r from-emerald-500 to-teal-500"
+        >
+          <Share2 size={14} />
+          Compartilhar palpite
+        </button>
+      </div>
+    );
+  }
+
+  // No navegador, mostra botões individuais
   const encoded = encodeURIComponent(text);
   const urlEncoded = encodeURIComponent(SITE_URL);
 
