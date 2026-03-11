@@ -167,58 +167,40 @@ export const appRouter = router({
 
         const database = getDb();
 
-        // Busca jogos agendados, em andamento e finalizados da API
-        // Mantém palpites de jogos ao vivo e finalizados há menos de 1h
-        let scheduledMatches: any[] = [];
-        let inPlayMatchIds: Set<string> = new Set();
-        let recentlyFinishedIds: Set<string> = new Set();
+        // Busca TODOS os jogos da API em uma única chamada (evita rate limit)
+        let allMatches: any[] = [];
         let oldFinishedIds: Set<string> = new Set();
         try {
-          const [scheduledRes, inPlayRes, finishedRes] = await Promise.all([
-            axios.get('https://api.football-data.org/v4/competitions/BSA/matches', {
-              params: { status: 'SCHEDULED' },
-              headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY },
-              timeout: 10000,
-            }),
-            axios.get('https://api.football-data.org/v4/competitions/BSA/matches', {
-              params: { status: 'IN_PLAY,PAUSED' },
-              headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY },
-              timeout: 10000,
-            }),
-            axios.get('https://api.football-data.org/v4/competitions/BSA/matches', {
-              params: { status: 'FINISHED', limit: 100 },
-              headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY },
-              timeout: 10000,
-            }),
-          ]);
-          scheduledMatches = scheduledRes.data.matches || [];
-          const inPlayMatches = inPlayRes.data.matches || [];
-          const finishedMatches = finishedRes.data.matches || [];
+          const res = await axios.get('https://api.football-data.org/v4/competitions/BSA/matches', {
+            headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY },
+            timeout: 10000,
+          });
+          allMatches = res.data.matches || [];
           
-          // Jogos ao vivo - manter palpites
-          inPlayMatchIds = new Set(inPlayMatches.map((m: any) => String(m.id)));
-          
-          // Jogos finalizados - separar recentes (< 5h) dos antigos
+          // Filtra jogos finalizados há mais de 5h (esses devem sumir dos palpites)
           const now = Date.now();
           const FIVE_HOURS = 5 * 60 * 60 * 1000;
-          for (const m of finishedMatches) {
-            const finishTime = new Date(m.utcDate).getTime() + (105 * 60 * 1000); // ~105min de jogo
-            if (now - finishTime < FIVE_HOURS) {
-              recentlyFinishedIds.add(String(m.id));
-            } else {
-              oldFinishedIds.add(String(m.id));
+          for (const m of allMatches) {
+            if (m.status === 'FINISHED') {
+              // Estima o término: hora do jogo + ~105min
+              const finishTime = new Date(m.utcDate).getTime() + (105 * 60 * 1000);
+              if (now - finishTime >= FIVE_HOURS) {
+                oldFinishedIds.add(String(m.id));
+              }
             }
           }
           
-          console.log(`[PREDICTIONS] API: ${scheduledMatches.length} agendados, ${inPlayMatchIds.size} ao vivo, ${recentlyFinishedIds.size} finalizados recentes, ${oldFinishedIds.size} finalizados antigos`);
+          const scheduled = allMatches.filter((m: any) => m.status === 'SCHEDULED').length;
+          const inPlay = allMatches.filter((m: any) => ['IN_PLAY', 'PAUSED'].includes(m.status)).length;
+          const finished = allMatches.filter((m: any) => m.status === 'FINISHED').length;
+          console.log(`[PREDICTIONS] API (1 chamada): ${scheduled} agendados, ${inPlay} ao vivo, ${finished} finalizados, ${oldFinishedIds.size} antigos (> 5h)`);
         } catch (apiErr) {
           console.warn('[PREDICTIONS] Erro ao buscar API football-data, usando dados do banco:', apiErr);
         }
 
         // Mapa de match_id -> dados da API (para corrigir datas e matchday)
-        // Inclui agendados e ao vivo
         const apiMatchMap = new Map<string, any>();
-        for (const m of scheduledMatches) {
+        for (const m of allMatches) {
           apiMatchMap.set(String(m.id), m);
         }
 
