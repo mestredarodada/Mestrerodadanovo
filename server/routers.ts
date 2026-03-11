@@ -1,7 +1,7 @@
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import axios from "axios";
 import { z } from "zod";
+import { getStandings, getMatches, getLiveMatches, getAllMatches, getFinishedMatches } from "./footballApi";
 
 export const appRouter = router({
   system: systemRouter,
@@ -9,15 +9,7 @@ export const appRouter = router({
   football: router({
     standings: publicProcedure.query(async () => {
       try {
-        const response = await axios.get(
-          'https://api.football-data.org/v4/competitions/BSA/standings',
-          {
-            headers: {
-              'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY,
-            },
-          }
-        );
-        return response.data.standings[0]?.table || [];
+        return await getStandings();
       } catch (error) {
         console.error('Erro ao carregar classificação:', error);
         throw new Error('Falha ao carregar classificação');
@@ -28,16 +20,7 @@ export const appRouter = router({
       .input(z.object({ status: z.enum(['SCHEDULED', 'FINISHED', 'IN_PLAY']).default('SCHEDULED') }))
       .query(async ({ input }) => {
         try {
-          const response = await axios.get(
-            'https://api.football-data.org/v4/competitions/BSA/matches',
-            {
-              params: { status: input.status },
-              headers: {
-                'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY,
-              },
-            }
-          );
-          return response.data.matches || [];
+          return await getMatches(input.status);
         } catch (error) {
           console.error(`Erro ao carregar jogos (${input.status}):`, error);
           throw new Error(`Falha ao carregar jogos`);
@@ -46,14 +29,7 @@ export const appRouter = router({
 
     live: publicProcedure.query(async () => {
       try {
-        const response = await axios.get(
-          'https://api.football-data.org/v4/competitions/BSA/matches',
-          {
-            params: { status: 'IN_PLAY' },
-            headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY },
-          }
-        );
-        return response.data.matches || [];
+        return await getLiveMatches();
       } catch (error) {
         console.error('Erro ao carregar jogos ao vivo:', error);
         return [];
@@ -66,15 +42,8 @@ export const appRouter = router({
         const { sql } = await import('drizzle-orm');
         const database = getDb();
 
-        // Busca jogos finalizados da API
-        const footballRes = await axios.get(
-          'https://api.football-data.org/v4/competitions/BSA/matches',
-          {
-            params: { status: 'FINISHED', limit: 50 },
-            headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY },
-          }
-        );
-        const finishedMatches: any[] = footballRes.data.matches || [];
+        // Busca jogos finalizados da API (com cache + fallback)
+        const finishedMatches: any[] = await getFinishedMatches(50);
 
         // Busca palpites do banco
         const result = await database.execute(sql`
@@ -167,15 +136,11 @@ export const appRouter = router({
 
         const database = getDb();
 
-        // Busca TODOS os jogos da API em uma única chamada (evita rate limit)
+        // Busca TODOS os jogos da API (com cache + fallback de múltiplas chaves)
         let allMatches: any[] = [];
         let oldFinishedIds: Set<string> = new Set();
         try {
-          const res = await axios.get('https://api.football-data.org/v4/competitions/BSA/matches', {
-            headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY },
-            timeout: 10000,
-          });
-          allMatches = res.data.matches || [];
+          allMatches = await getAllMatches();
           
           // Filtra jogos finalizados há mais de 5h (esses devem sumir dos palpites)
           const now = Date.now();
@@ -193,7 +158,7 @@ export const appRouter = router({
           const scheduled = allMatches.filter((m: any) => m.status === 'SCHEDULED').length;
           const inPlay = allMatches.filter((m: any) => ['IN_PLAY', 'PAUSED'].includes(m.status)).length;
           const finished = allMatches.filter((m: any) => m.status === 'FINISHED').length;
-          console.log(`[PREDICTIONS] API (1 chamada): ${scheduled} agendados, ${inPlay} ao vivo, ${finished} finalizados, ${oldFinishedIds.size} antigos (> 5h)`);
+          console.log(`[PREDICTIONS] ${scheduled} agendados, ${inPlay} ao vivo, ${finished} finalizados, ${oldFinishedIds.size} antigos (> 5h)`);
         } catch (apiErr) {
           console.warn('[PREDICTIONS] Erro ao buscar API football-data, usando dados do banco:', apiErr);
         }
@@ -244,8 +209,8 @@ export const appRouter = router({
           }
         }
 
-        // Normaliza os campos e filtra apenas jogos finalizados há mais de 1h
-        // Mantém: agendados, ao vivo, e finalizados recentes (< 1h)
+        // Normaliza os campos e filtra jogos finalizados há mais de 5h
+        // Mantém: agendados, ao vivo, e finalizados recentes (< 5h)
         const predictions = (result.rows || result as any[])
           .filter((row: any) => !oldFinishedIds.has(String(row.match_id)))
           .map((row: any) => {
