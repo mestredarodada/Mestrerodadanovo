@@ -57,7 +57,7 @@ export const useStandings = (): ApiResponse<Standing[]> => {
 };
 
 export const useMatches = (status: 'SCHEDULED' | 'FINISHED' | 'IN_PLAY' = 'SCHEDULED'): ApiResponse<Match[]> => {
-  const { data, isLoading, error } = trpc.football.matches.useQuery({ status });
+  const { data, isLoading, error } = trpc.football.matches.useQuery({ status }, { staleTime: 0 });
 
   return {
     data: data || null,
