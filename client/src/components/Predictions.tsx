@@ -106,7 +106,7 @@ function ShareButtons({ prediction }: { prediction: any }) {
 
   const PLAYSTORE_LINK = 'https://play.google.com/store/apps/details?id=br.com.mestredarodada.app';
 
-  const affiliateBlock = isAppWebView() ? '' : `\n\n🎰 Odds incríveis — Cadastre-se:\n${AFFILIATE_LINK}`;
+  const affiliateBlock = `\n\n🎰 Odds incríveis — Cadastre-se:\n${AFFILIATE_LINK}`;
   const text = `⚽ *${home} x ${away}*\n\n🤖 Palpite do Mestre da Rodada\n📊 *${main.text}*${score}${goals}${bts}${extra}${affiliateBlock}\n\n📲 Baixe o app oficial:\n${PLAYSTORE_LINK}\n\n🌐 ${SITE_URL}`;
 
   const encoded = encodeURIComponent(text);
@@ -378,8 +378,8 @@ function PredictionCard({ prediction }: { prediction: any }) {
         </Link>
       </div>
 
-      {/* Botões de compartilhamento - oculto no app para evitar erro de conexão */}
-      {!isApp && <ShareButtons prediction={prediction} />}
+      {/* Botões de compartilhamento */}
+      <ShareButtons prediction={prediction} />
 
       {/* Análise expansível */}
       {prediction.justification && (
