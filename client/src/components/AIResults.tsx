@@ -235,28 +235,6 @@ export function AIResults() {
 
   return (
     <div>
-      {/* Banner de estatísticas gerais */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 p-4 mb-4 shadow-lg"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <TrendingUp size={20} className="text-white" />
-            </div>
-            <div>
-              <p className="text-white/70 text-xs font-semibold uppercase tracking-wide">Taxa de Acerto Geral</p>
-              <p className="text-white font-black text-2xl leading-none">{globalRate}%</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-white/70 text-xs">{results.length} jogos analisados</p>
-            <p className="text-white/70 text-xs">{totalHits} de {totalChecked} mercados acertados</p>
-          </div>
-        </div>
-      </motion.div>
 
       {/* Submenu de rodadas */}
       {grouped.length > 1 && (
