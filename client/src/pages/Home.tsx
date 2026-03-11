@@ -226,8 +226,8 @@ function MobileNav({ active, onSelect }: { active: Section; onSelect: (s: Sectio
   const mobileItems = navItems.slice(0, 5);
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0f172a]/95 backdrop-blur-xl border-t border-white/10 safe-area-bottom">
-      <div className="flex items-center justify-around px-1 py-2">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0f172a]/95 backdrop-blur-xl border-t border-white/10">
+      <div className="flex items-center justify-around px-1 pt-3 pb-6">
         {mobileItems.map((item) => {
           const isActive = active === item.id;
           const Icon = item.icon;
