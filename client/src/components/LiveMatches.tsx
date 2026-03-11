@@ -6,10 +6,28 @@ import { ptBR } from 'date-fns/locale';
 
 // ─── Card de jogo ao vivo ─────────────────────────────────────────────────────
 
+function getMatchPeriod(match: any): { label: string; color: string } {
+  const status = match.status;
+  const minute = match.minute ?? null;
+
+  if (status === 'PAUSED') {
+    return { label: 'INTERVALO', color: 'text-amber-500' };
+  }
+  if (status === 'IN_PLAY' && minute !== null) {
+    if (minute <= 45) {
+      return { label: '1º TEMPO', color: 'text-red-500' };
+    } else {
+      return { label: '2º TEMPO', color: 'text-red-500' };
+    }
+  }
+  return { label: 'EM ANDAMENTO', color: 'text-red-500' };
+}
+
 function LiveMatchCard({ match, index, onViewPrediction }: { match: any; index: number; onViewPrediction?: () => void }) {
   const homeGoals = match.score?.fullTime?.home ?? match.score?.halfTime?.home ?? 0;
   const awayGoals = match.score?.fullTime?.away ?? match.score?.halfTime?.away ?? 0;
   const minute = match.minute ?? null;
+  const period = getMatchPeriod(match);
 
   return (
     <motion.div
@@ -59,9 +77,9 @@ function LiveMatchCard({ match, index, onViewPrediction }: { match: any; index: 
               <span className="text-muted-foreground text-2xl font-light">-</span>
               <span className="font-black text-4xl text-foreground">{awayGoals}</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 rounded-full px-2.5 py-0.5">
-              <Radio size={10} className="text-red-500 animate-pulse" />
-              <span className="text-red-500 text-[10px] font-bold">EM ANDAMENTO</span>
+            <div className={`flex items-center gap-1.5 ${period.label === 'INTERVALO' ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20'} border rounded-full px-2.5 py-0.5`}>
+              <Radio size={10} className={`${period.color} ${period.label !== 'INTERVALO' ? 'animate-pulse' : ''}`} />
+              <span className={`${period.color} text-[10px] font-bold`}>{period.label}</span>
             </div>
           </div>
 

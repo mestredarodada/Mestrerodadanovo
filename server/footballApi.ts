@@ -164,7 +164,7 @@ export async function getMatches(status: string) {
 export async function getLiveMatches() {
   const data = await footballApiGet(
     `${BSA_URL}/matches`,
-    { status: 'IN_PLAY' },
+    { status: 'IN_PLAY,PAUSED' },
     'matches_live',
     CACHE_TTL.MATCHES_LIVE
   );
