@@ -190,6 +190,24 @@ function Sidebar({
         })}
       </nav>
 
+      {/* Card Resultados da IA */}
+      {!collapsed && (
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          onClick={() => onSelect('ai-results')}
+          className="mx-2 mb-3 rounded-2xl overflow-hidden p-3 text-left group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-md bg-gradient-to-br from-violet-600 to-indigo-600"
+        >
+          <div className="w-7 h-7 rounded-xl bg-white/20 flex items-center justify-center mb-2">
+            <Brain size={14} className="text-white" />
+          </div>
+          <p className="text-[11px] text-white/70 font-medium">Result. da IA</p>
+          <p className="text-xs font-bold text-white mt-0.5">Acertos do Mestre</p>
+          <div className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-300 rounded-2xl" />
+        </motion.button>
+      )}
+
       {/* Toggle button */}
       <div className="p-3 border-t border-white/10">
         <button
