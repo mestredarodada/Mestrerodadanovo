@@ -104,9 +104,10 @@ function ShareButtons({ prediction }: { prediction: any }) {
   const bts = prediction.bothTeamsToScore === 'YES' ? '\n🎯 Ambas marcam: SIM' : prediction.bothTeamsToScore === 'NO' ? '\n🎯 Ambas marcam: NÃO' : '';
   const extra = prediction.extraTip ? `\n⭐ Melhor aposta: ${prediction.extraTip}` : '';
 
-  // No app, remove link de afiliado do texto de compartilhamento
-  const affiliateBlock = isAppWebView() ? '' : `\n\n🏆 Casa recomendada para apostar com as melhores Odds:\n${AFFILIATE_LINK}`;
-  const text = `🤖 *Palpite do Mestre da Rodada*\n\n⚽ ${home} x ${away}\n📊 Resultado: *${main.text}*${score}${goals}${bts}${extra}${affiliateBlock}\n\n🔗 Mais palpites grátis por IA:\n${SITE_URL} \u2014 Palpites feitos por intelig\u00eancia artificial 100% gr\u00e1tis para voc\u00ea.`;
+  const PLAYSTORE_LINK = 'https://play.google.com/store/apps/details?id=br.com.mestredarodada.app';
+
+  const affiliateBlock = isAppWebView() ? '' : `\n\n🎰 Odds incríveis — Cadastre-se:\n${AFFILIATE_LINK}`;
+  const text = `⚽ *${home} x ${away}*\n\n🤖 Palpite do Mestre da Rodada\n📊 *${main.text}*${score}${goals}${bts}${extra}${affiliateBlock}\n\n📲 Baixe o app oficial:\n${PLAYSTORE_LINK}\n\n🌐 ${SITE_URL}`;
 
   const encoded = encodeURIComponent(text);
   const urlEncoded = encodeURIComponent(SITE_URL);
