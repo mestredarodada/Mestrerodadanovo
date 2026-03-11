@@ -208,7 +208,12 @@ function PredictionCard({ prediction }: { prediction: any }) {
 
   const matchDate = prediction.matchDate ? new Date(prediction.matchDate) : null;
   const dateStr = matchDate
-    ? format(matchDate, "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })
+    ? matchDate.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
     : 'Data não disponível';
 
   const btsValue = prediction.bothTeamsToScore === 'YES'
@@ -426,7 +431,15 @@ export function Predictions() {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(p);
     }
-    // Ordena em ordem CRESCENTE: rodada menor (em andamento) primeiro
+    // Ordena cada rodada internamente pelo jogo mais próximo primeiro (data crescente)
+    for (const [, preds] of map) {
+      preds.sort((a: any, b: any) => {
+        const dateA = a.matchDate ? new Date(a.matchDate).getTime() : 0;
+        const dateB = b.matchDate ? new Date(b.matchDate).getTime() : 0;
+        return dateA - dateB;
+      });
+    }
+    // Ordena rodadas em ordem CRESCENTE: rodada menor (em andamento) primeiro
     return Array.from(map.entries()).sort(([a], [b]) => Number(a) - Number(b));
   }, [predictions]);
 

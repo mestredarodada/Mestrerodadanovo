@@ -172,7 +172,7 @@ export const appRouter = router({
           SELECT *
           FROM predictions_simple
           WHERE is_published = true
-          ORDER BY match_date DESC
+          ORDER BY match_date ASC
         `);
 
         // Normaliza os campos snake_case para camelCase
