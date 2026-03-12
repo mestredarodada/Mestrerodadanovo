@@ -43,20 +43,30 @@ function startPredictionJob() {
   }, PREDICTION_JOB_INTERVAL_MS);
 }
 
-// ─── Limpeza automática: remove palpites com mais de 7 dias ────────────────────
+// ─── Limpeza automática: limpa texto pesado mas preserva dados para Resultados da IA ───
+// Estratégia:
+//   1. Após 2 dias: limpa 'justification' (texto longo da análise) — os dados básicos
+//      (palpites, times, acertos) ficam no banco para os cards de Resultados da IA.
+//   2. NUNCA deleta o registro inteiro — os cards dependem desses dados para sempre.
 function startCleanupJob() {
   const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 horas
-  console.log('[CleanupJob] ✅ Iniciado — limpeza diária de palpites com +7 dias.');
+  console.log('[CleanupJob] ✅ Iniciado — limpeza diária de textos pesados (+2 dias).');
   const runCleanup = async () => {
     try {
       const { getDb } = await import('../db');
       const { sql } = await import('drizzle-orm');
       const database = getDb();
+
+      // Limpa o campo 'justification' (texto pesado) de palpites com +2 dias
+      // Mantém todos os outros campos intactos para os Resultados da IA
       const result = await database.execute(sql`
-        DELETE FROM predictions_simple
-        WHERE created_at < NOW() - INTERVAL '14 days'
+        UPDATE predictions_simple
+        SET justification = ''
+        WHERE created_at < NOW() - INTERVAL '2 days'
+          AND justification IS NOT NULL
+          AND justification != ''
       `);
-      console.log('[CleanupJob] 🗑️ Palpites antigos removidos com sucesso.');
+      console.log('[CleanupJob] 🧹 Textos pesados limpos (justification) — dados dos cards preservados.');
     } catch (err: any) {
       console.error('[CleanupJob] Erro na limpeza:', err.message);
     }
@@ -228,7 +238,7 @@ async function startServer() {
 
     // 2. Inicia o job de geração sequencial de palpites
     startPredictionJob();
-    // 3. Inicia a limpeza automática de palpites com +7 dias
+    // 3. Inicia a limpeza automática de textos pesados (+2 dias, preserva dados dos cards)
     startCleanupJob();
     // 4. Inicia o job de geração automática de artigos de blog
     startBlogJob();

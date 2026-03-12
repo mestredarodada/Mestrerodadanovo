@@ -447,26 +447,49 @@ function RoundSummary({ results }: { results: any[] }) {
   );
 }
 
+// ─── Constantes ─────────────────────────────────────────────────────────────
+
+const FIRST_ROUND = 5; // App começou na rodada 5
+const TOTAL_ROUNDS = 38;
+
 // ─── Mensagem de Rodada Futura ──────────────────────────────────────────────
 
-function FutureRoundMessage({ round }: { round: number }) {
+function FutureRoundMessage({ round, currentRound }: { round: number; currentRound: number }) {
+  const isPastWithoutData = round <= currentRound;
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-16 gap-4"
     >
-      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center shadow-lg">
+      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${
+        isPastWithoutData 
+          ? 'bg-gradient-to-br from-amber-500 to-orange-600' 
+          : 'bg-gradient-to-br from-slate-600 to-slate-700'
+      }`}>
         <Clock size={28} className="text-white" />
       </div>
       <div className="text-center">
         <p className="font-poppins font-black text-lg text-foreground">Rodada {round}</p>
-        <p className="text-muted-foreground text-sm mt-1">
-          Aguarde, esta rodada ainda não começou.
-        </p>
-        <p className="text-muted-foreground/60 text-xs mt-2">
-          Os resultados aparecerão aqui quando os jogos forem finalizados.
-        </p>
+        {isPastWithoutData ? (
+          <>
+            <p className="text-muted-foreground text-sm mt-1">
+              Não há palpites registrados para esta rodada.
+            </p>
+            <p className="text-muted-foreground/60 text-xs mt-2">
+              O Mestre da Rodada começou a analisar a partir da Rodada {FIRST_ROUND}.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-muted-foreground text-sm mt-1">
+              Aguarde, esta rodada ainda não começou.
+            </p>
+            <p className="text-muted-foreground/60 text-xs mt-2">
+              Os resultados aparecerão aqui quando os jogos forem finalizados.
+            </p>
+          </>
+        )}
       </div>
     </motion.div>
   );
@@ -487,7 +510,6 @@ function RoundSelector({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
-  const TOTAL_ROUNDS = 38;
 
   // Scroll para a rodada selecionada quando montar
   useEffect(() => {
@@ -528,7 +550,7 @@ function RoundSelector({
         className="flex gap-1.5 overflow-x-auto scrollbar-hide px-8 py-1"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {Array.from({ length: TOTAL_ROUNDS }, (_, i) => i + 1).map((round) => {
+        {Array.from({ length: TOTAL_ROUNDS - FIRST_ROUND + 1 }, (_, i) => i + FIRST_ROUND).map((round) => {
           const data = roundsWithData.get(round);
           const hasData = !!data;
           const isSelected = selectedRound === round;
@@ -598,20 +620,20 @@ export function AIResults() {
     return map;
   }, [grouped]);
 
-  // Detectar rodada atual (a maior rodada com dados)
+  // Detectar rodada atual (a maior rodada com dados, mínimo FIRST_ROUND)
   const currentRound = useMemo(() => {
-    if (grouped.size === 0) return 1;
+    if (grouped.size === 0) return FIRST_ROUND;
     return Math.max(...Array.from(grouped.keys()));
   }, [grouped]);
 
   const [selectedRound, setSelectedRound] = useState<number>(0);
 
-  // Inicializar na rodada atual
+  // SEMPRE inicializar na rodada atual (a mais recente com dados)
   useEffect(() => {
-    if (currentRound > 0 && selectedRound === 0) {
+    if (currentRound >= FIRST_ROUND && selectedRound === 0) {
       setSelectedRound(currentRound);
     }
-  }, [currentRound, selectedRound]);
+  }, [currentRound]);
 
   // Resultados da rodada selecionada
   const currentResults = useMemo(() => {
@@ -693,7 +715,7 @@ export function AIResults() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
           >
-            <FutureRoundMessage round={selectedRound} />
+            <FutureRoundMessage round={selectedRound} currentRound={currentRound} />
           </motion.div>
         )}
       </AnimatePresence>
