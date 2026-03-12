@@ -1,7 +1,7 @@
 import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { CheckCircle2, XCircle, MinusCircle, Trophy, TrendingUp, Brain, Share2, Copy, CheckCircle, Target, Zap, Shield, Timer, CornerDownRight, CreditCard, Star, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle2, XCircle, MinusCircle, Trophy, TrendingUp, Brain, Share2, Copy, CheckCircle, Target, Zap, Shield, Timer, CornerDownRight, CreditCard, Star, Clock, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -241,6 +241,12 @@ function AIShareButtons({ r, hitCount, totalChecked }: { r: any; hitCount: numbe
 // ─── Card de Resultado ────────────────────────────────────────────────────────
 
 function AIResultCard({ r, index }: { r: any; index: number }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const rate = r.totalChecked > 0 ? (r.hitCount / r.totalChecked) * 100 : 0;
+  const statusColor = rate >= 60 ? 'text-emerald-500' : rate >= 40 ? 'text-amber-500' : 'text-red-400';
+  const statusLabel = rate >= 60 ? 'Boa análise' : rate >= 40 ? 'Análise parcial' : 'Pode melhorar';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -287,118 +293,165 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
         </div>
       </div>
 
-      {/* Body */}
-      <div className="p-4">
-        {/* Barra de progresso de acertos */}
-        <HitProgressBar hitCount={r.hitCount} totalChecked={r.totalChecked} />
-
-        {/* Placar exato - destaque especial quando acerta */}
-        {r.scoreHit && (
-          <div className="mb-3 rounded-xl bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 px-3 py-2.5 flex items-center gap-2">
-            <span className="text-lg">🎯</span>
-            <div>
-              <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wide">Placar Exato!</p>
-              <p className="text-sm text-foreground font-bold">{r.likelyScore} — Acertou em cheio!</p>
-            </div>
+      {/* Resumo compacto (sempre visível) */}
+      <div className="px-4 pt-3 pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Brain size={14} className={statusColor} />
+            <span className="text-xs font-semibold text-foreground">{statusLabel}</span>
           </div>
-        )}
-
-        {/* Mercados verificáveis */}
-        <div className="mb-2">
-          <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider mb-2">Mercados analisados</p>
-          
-          <MarketRow
-            icon={<Target size={13} />}
-            label="Resultado"
-            prediction={formatPrediction(r.mainPrediction, r.homeTeamName, r.awayTeamName)}
-            actual={`${r.actualHomeGoals} x ${r.actualAwayGoals}`}
-            hit={r.resultHit}
-          />
-
-          {r.goalsPrediction && (
-            <MarketRow
-              icon={<TrendingUp size={13} />}
-              label="Gols"
-              prediction={formatPrediction(r.goalsPrediction, r.homeTeamName, r.awayTeamName) + ' gols'}
-              actual={`total: ${r.actualHomeGoals + r.actualAwayGoals}`}
-              hit={r.goalsHit}
-            />
-          )}
-
-          {r.bothTeamsToScore && (
-            <MarketRow
-              icon={<Zap size={13} />}
-              label="Ambas marcam"
-              prediction={r.bothTeamsToScore === 'YES' ? 'SIM' : 'NÃO'}
-              actual={r.actualHomeGoals > 0 && r.actualAwayGoals > 0 ? 'SIM' : 'NÃO'}
-              hit={r.bttsHit}
-            />
-          )}
-
-          {r.doubleChance && (
-            <MarketRow
-              icon={<Shield size={13} />}
-              label="Dupla chance"
-              prediction={r.doubleChance}
-              hit={r.doubleChanceHit}
-            />
-          )}
-
-          {r.halfTimePrediction && (
-            <MarketRow
-              icon={<Timer size={13} />}
-              label="1º Tempo"
-              prediction={r.halfTimePrediction}
-              actual={r.actualHalfTimeHome !== null ? `${r.actualHalfTimeHome} x ${r.actualHalfTimeAway}` : undefined}
-              hit={r.halfTimeHit}
-            />
-          )}
-
-          {r.likelyScore && !r.scoreHit && (
-            <MarketRow
-              icon={<Star size={13} />}
-              label="Placar previsto"
-              prediction={r.likelyScore}
-              actual={`${r.actualHomeGoals} x ${r.actualAwayGoals}`}
-              hit={r.scoreHit}
-            />
-          )}
+          <span className={`text-sm font-black ${statusColor}`}>
+            {r.hitCount} de {r.totalChecked} acertos
+          </span>
         </div>
 
-        {/* Mercados informativos (sem verificação possível) */}
-        {(r.cornersPrediction || r.cardsPrediction) && (
-          <div className="mb-2">
-            <p className="text-[10px] font-bold text-blue-400/50 uppercase tracking-wider mb-2 mt-3">Previsões adicionais</p>
-            
-            {r.cornersPrediction && (
-              <InfoMarketRow
-                icon={<CornerDownRight size={13} />}
-                label="Escanteios"
-                prediction={formatCorners(r.cornersPrediction)}
-              />
-            )}
-
-            {r.cardsPrediction && (
-              <InfoMarketRow
-                icon={<CreditCard size={13} />}
-                label="Cartões"
-                prediction={formatCards(r.cardsPrediction)}
-              />
-            )}
+        {/* Placar exato inline quando acerta */}
+        {r.scoreHit && (
+          <div className="mt-2 flex items-center gap-1.5 text-amber-500">
+            <span className="text-sm">🎯</span>
+            <span className="text-xs font-bold">Placar Exato! {r.likelyScore}</span>
           </div>
         )}
-
-        {/* Melhor aposta */}
-        {r.bestBet && (
-          <div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2">
-            <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wide mb-0.5">⭐ Melhor Aposta Prevista</p>
-            <p className="text-sm text-foreground font-medium">{r.bestBet}</p>
-          </div>
-        )}
-
-        {/* Botões de compartilhar */}
-        <AIShareButtons r={r} hitCount={r.hitCount} totalChecked={r.totalChecked} />
       </div>
+
+      {/* Botão expandir/recolher */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-all active:scale-[0.98] border-t border-border/40 hover:bg-muted/50"
+      >
+        <span className={expanded ? 'text-purple-500' : 'text-muted-foreground'}>
+          {expanded ? 'Recolher análise' : 'Ver análise completa'}
+        </span>
+        <ChevronDown 
+          size={14} 
+          className={`transition-transform duration-300 ${expanded ? 'rotate-180 text-purple-500' : 'text-muted-foreground'}`} 
+        />
+      </button>
+
+      {/* Conteúdo expansível */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 pt-2 border-t border-border/40">
+              {/* Barra de progresso de acertos */}
+              <HitProgressBar hitCount={r.hitCount} totalChecked={r.totalChecked} />
+
+              {/* Placar exato - destaque especial quando acerta */}
+              {r.scoreHit && (
+                <div className="mb-3 rounded-xl bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 px-3 py-2.5 flex items-center gap-2">
+                  <span className="text-lg">🎯</span>
+                  <div>
+                    <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wide">Placar Exato!</p>
+                    <p className="text-sm text-foreground font-bold">{r.likelyScore} — Acertou em cheio!</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Mercados verificáveis */}
+              <div className="mb-2">
+                <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider mb-2">Mercados analisados</p>
+                
+                <MarketRow
+                  icon={<Target size={13} />}
+                  label="Resultado"
+                  prediction={formatPrediction(r.mainPrediction, r.homeTeamName, r.awayTeamName)}
+                  actual={`${r.actualHomeGoals} x ${r.actualAwayGoals}`}
+                  hit={r.resultHit}
+                />
+
+                {r.goalsPrediction && (
+                  <MarketRow
+                    icon={<TrendingUp size={13} />}
+                    label="Gols"
+                    prediction={formatPrediction(r.goalsPrediction, r.homeTeamName, r.awayTeamName) + ' gols'}
+                    actual={`total: ${r.actualHomeGoals + r.actualAwayGoals}`}
+                    hit={r.goalsHit}
+                  />
+                )}
+
+                {r.bothTeamsToScore && (
+                  <MarketRow
+                    icon={<Zap size={13} />}
+                    label="Ambas marcam"
+                    prediction={r.bothTeamsToScore === 'YES' ? 'SIM' : 'NÃO'}
+                    actual={r.actualHomeGoals > 0 && r.actualAwayGoals > 0 ? 'SIM' : 'NÃO'}
+                    hit={r.bttsHit}
+                  />
+                )}
+
+                {r.doubleChance && (
+                  <MarketRow
+                    icon={<Shield size={13} />}
+                    label="Dupla chance"
+                    prediction={r.doubleChance}
+                    hit={r.doubleChanceHit}
+                  />
+                )}
+
+                {r.halfTimePrediction && (
+                  <MarketRow
+                    icon={<Timer size={13} />}
+                    label="1º Tempo"
+                    prediction={r.halfTimePrediction}
+                    actual={r.actualHalfTimeHome !== null ? `${r.actualHalfTimeHome} x ${r.actualHalfTimeAway}` : undefined}
+                    hit={r.halfTimeHit}
+                  />
+                )}
+
+                {r.likelyScore && !r.scoreHit && (
+                  <MarketRow
+                    icon={<Star size={13} />}
+                    label="Placar previsto"
+                    prediction={r.likelyScore}
+                    actual={`${r.actualHomeGoals} x ${r.actualAwayGoals}`}
+                    hit={r.scoreHit}
+                  />
+                )}
+              </div>
+
+              {/* Mercados informativos (sem verificação possível) */}
+              {(r.cornersPrediction || r.cardsPrediction) && (
+                <div className="mb-2">
+                  <p className="text-[10px] font-bold text-blue-400/50 uppercase tracking-wider mb-2 mt-3">Previsões adicionais</p>
+                  
+                  {r.cornersPrediction && (
+                    <InfoMarketRow
+                      icon={<CornerDownRight size={13} />}
+                      label="Escanteios"
+                      prediction={formatCorners(r.cornersPrediction)}
+                    />
+                  )}
+
+                  {r.cardsPrediction && (
+                    <InfoMarketRow
+                      icon={<CreditCard size={13} />}
+                      label="Cartões"
+                      prediction={formatCards(r.cardsPrediction)}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Melhor aposta */}
+              {r.bestBet && (
+                <div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2">
+                  <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wide mb-0.5">⭐ Melhor Aposta Prevista</p>
+                  <p className="text-sm text-foreground font-medium">{r.bestBet}</p>
+                </div>
+              )}
+
+              {/* Botões de compartilhar */}
+              <AIShareButtons r={r} hitCount={r.hitCount} totalChecked={r.totalChecked} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
