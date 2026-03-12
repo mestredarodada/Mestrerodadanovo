@@ -255,6 +255,7 @@ function MarketItem({
 
 function PredictionCard({ prediction }: { prediction: any }) {
   const [expanded, setExpanded] = useState(false);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
   const isApp = useIsAppWebView();
 
   const home = prediction.homeTeamName || 'Time A';
@@ -340,131 +341,160 @@ function PredictionCard({ prediction }: { prediction: any }) {
         </div>
       </div>
 
-      {/* Grid de mercados — sem % e sem termômetros */}
-      <div className="px-4 mb-3">
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mercados</p>
-        <div className="grid grid-cols-2 gap-2">
+      {/* Botão expandir/recolher detalhes */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-all active:scale-[0.98] border-t border-border/40 hover:bg-muted/50"
+      >
+        <span className={expanded ? 'text-purple-500' : 'text-muted-foreground'}>
+          {expanded ? 'Recolher detalhes' : 'Ver todos os mercados'}
+        </span>
+        <ChevronDown
+          size={14}
+          className={`transition-transform duration-300 ${expanded ? 'rotate-180 text-purple-500' : 'text-muted-foreground'}`}
+        />
+      </button>
 
-          <MarketItem
-            icon={<TrendingUp size={12} />}
-            label="Gols"
-            value={goalsLabel(prediction.goalsPrediction)}
-          />
-
-          <MarketItem
-            icon={<Target size={12} />}
-            label="Ambas marcam"
-            value={btsValue}
-          />
-
-          {prediction.cornersPrediction && (
-            <MarketItem
-              icon={<Flag size={12} />}
-              label="Escanteios"
-              value={cornersLabel(prediction.cornersPrediction)}
-            />
-          )}
-
-          {prediction.cardsPrediction && (
-            <MarketItem
-              icon={<CreditCard size={12} />}
-              label="Cartões"
-              value={cardsLabel(prediction.cardsPrediction)}
-            />
-          )}
-
-          {prediction.doubleChance && (
-            <MarketItem
-              icon={<BarChart3 size={12} />}
-              label="Dupla Chance"
-              value={doubleChanceLabel(prediction.doubleChance, home, away)}
-            />
-          )}
-
-          {prediction.halfTimePrediction && (
-            <MarketItem
-              icon={<Zap size={12} />}
-              label="1º Tempo"
-              value={halfTimeLabel(prediction.halfTimePrediction, home, away)}
-            />
-          )}
-
-        </div>
-      </div>
-
-      {/* Melhor aposta do jogo */}
-      {prediction.extraTip && (
-        <div className="mx-4 mb-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl p-3">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Star size={13} className="text-amber-500 fill-amber-500" />
-            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
-              Melhor aposta do jogo
-            </span>
-          </div>
-          <p className="text-xs font-semibold text-foreground">{prediction.extraTip}</p>
-        </div>
-      )}
-
-      {/* Botão de afiliado — oculto no app para conformidade com Google Play */}
-      {!isApp && (
-        <div className="px-4 mb-3">
-          <a
-            href={AFFILIATE_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${prediction.homeTeamName} x ${prediction.awayTeamName}`)}
-            className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 text-white font-bold text-sm rounded-xl py-3 px-4 transition-all duration-200 shadow-md hover:shadow-orange-300/40 dark:hover:shadow-orange-900/40"
+      {/* Conteúdo expansível */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="overflow-hidden"
           >
-            <ExternalLink size={15} />
-            <span>Faça sua aposta aqui</span>
-            <span className="text-orange-200 text-xs font-normal hidden sm:inline">(casa recomendada)</span>
-          </a>
-        </div>
-      )}
+            <div className="border-t border-border/40">
+              {/* Grid de mercados */}
+              <div className="px-4 pt-3 mb-3">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mercados</p>
+                <div className="grid grid-cols-2 gap-2">
 
-      {/* Link para página individual do palpite */}
-      <div className="px-4 mb-2">
-        <Link href={`/palpite/${generateSlug(prediction.homeTeamName || '', prediction.awayTeamName || '', prediction.matchDate || new Date())}`}>
-          <a className="flex items-center justify-center gap-2 w-full bg-muted/50 hover:bg-muted border border-border hover:border-purple-500/40 text-muted-foreground hover:text-purple-500 font-semibold text-xs rounded-xl py-2.5 px-4 transition-all duration-200">
-            <ExternalLink size={13} />
-            <span>Ver página completa do palpite</span>
-          </a>
-        </Link>
-      </div>
+                  <MarketItem
+                    icon={<TrendingUp size={12} />}
+                    label="Gols"
+                    value={goalsLabel(prediction.goalsPrediction)}
+                  />
 
-      {/* Botões de compartilhamento */}
-      <ShareButtons prediction={prediction} />
+                  <MarketItem
+                    icon={<Target size={12} />}
+                    label="Ambas marcam"
+                    value={btsValue}
+                  />
 
-      {/* Análise expansível */}
-      {prediction.justification && (
-        <div className="border-t border-border/60">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-colors py-2.5 px-4"
-          >
-            <span className="flex items-center gap-1.5">
-              <Sparkles size={12} />
-              Análise completa do Mestre
-            </span>
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-          <AnimatePresence>
-            {expanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <p className="text-xs text-muted-foreground leading-relaxed px-4 pb-4">
-                  {prediction.justification}
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
+                  {prediction.cornersPrediction && (
+                    <MarketItem
+                      icon={<Flag size={12} />}
+                      label="Escanteios"
+                      value={cornersLabel(prediction.cornersPrediction)}
+                    />
+                  )}
+
+                  {prediction.cardsPrediction && (
+                    <MarketItem
+                      icon={<CreditCard size={12} />}
+                      label="Cartões"
+                      value={cardsLabel(prediction.cardsPrediction)}
+                    />
+                  )}
+
+                  {prediction.doubleChance && (
+                    <MarketItem
+                      icon={<BarChart3 size={12} />}
+                      label="Dupla Chance"
+                      value={doubleChanceLabel(prediction.doubleChance, home, away)}
+                    />
+                  )}
+
+                  {prediction.halfTimePrediction && (
+                    <MarketItem
+                      icon={<Zap size={12} />}
+                      label="1º Tempo"
+                      value={halfTimeLabel(prediction.halfTimePrediction, home, away)}
+                    />
+                  )}
+
+                </div>
+              </div>
+
+              {/* Melhor aposta do jogo */}
+              {prediction.extraTip && (
+                <div className="mx-4 mb-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl p-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Star size={13} className="text-amber-500 fill-amber-500" />
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+                      Melhor aposta do jogo
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-foreground">{prediction.extraTip}</p>
+                </div>
+              )}
+
+              {/* Botão de afiliado — oculto no app para conformidade com Google Play */}
+              {!isApp && (
+                <div className="px-4 mb-3">
+                  <a
+                    href={AFFILIATE_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${prediction.homeTeamName} x ${prediction.awayTeamName}`)}
+                    className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 text-white font-bold text-sm rounded-xl py-3 px-4 transition-all duration-200 shadow-md hover:shadow-orange-300/40 dark:hover:shadow-orange-900/40"
+                  >
+                    <ExternalLink size={15} />
+                    <span>Faça sua aposta aqui</span>
+                    <span className="text-orange-200 text-xs font-normal hidden sm:inline">(casa recomendada)</span>
+                  </a>
+                </div>
+              )}
+
+              {/* Link para página individual do palpite */}
+              <div className="px-4 mb-2">
+                <Link href={`/palpite/${generateSlug(prediction.homeTeamName || '', prediction.awayTeamName || '', prediction.matchDate || new Date())}`}>
+                  <a className="flex items-center justify-center gap-2 w-full bg-muted/50 hover:bg-muted border border-border hover:border-purple-500/40 text-muted-foreground hover:text-purple-500 font-semibold text-xs rounded-xl py-2.5 px-4 transition-all duration-200">
+                    <ExternalLink size={13} />
+                    <span>Ver página completa do palpite</span>
+                  </a>
+                </Link>
+              </div>
+
+              {/* Botões de compartilhamento */}
+              <ShareButtons prediction={prediction} />
+
+              {/* Análise expansível */}
+              {prediction.justification && (
+                <div className="border-t border-border/60">
+                  <button
+                    onClick={() => setAnalysisOpen(!analysisOpen)}
+                    className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-colors py-2.5 px-4"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles size={12} />
+                      Análise completa do Mestre
+                    </span>
+                    {analysisOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </button>
+                  <AnimatePresence>
+                    {analysisOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <p className="text-xs text-muted-foreground leading-relaxed px-4 pb-4">
+                          {prediction.justification}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
