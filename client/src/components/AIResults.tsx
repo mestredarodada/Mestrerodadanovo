@@ -1,7 +1,7 @@
 import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useMemo, useEffect } from 'react';
-import { CheckCircle2, XCircle, MinusCircle, Trophy, TrendingUp, Brain, Share2, Copy, CheckCircle, Target, Zap, Shield, Timer, CornerDownRight, CreditCard, Star } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { CheckCircle2, XCircle, MinusCircle, Trophy, TrendingUp, Brain, Share2, Copy, CheckCircle, Target, Zap, Shield, Timer, CornerDownRight, CreditCard, Star, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -241,8 +241,6 @@ function AIShareButtons({ r, hitCount, totalChecked }: { r: any; hitCount: numbe
 // ─── Card de Resultado ────────────────────────────────────────────────────────
 
 function AIResultCard({ r, index }: { r: any; index: number }) {
-  const hitRate = r.totalChecked > 0 ? Math.round((r.hitCount / r.totalChecked) * 100) : 0;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -405,21 +403,16 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
   );
 }
 
-// ─── Resumo Geral ────────────────────────────────────────────────────────────
+// ─── Resumo da Rodada ────────────────────────────────────────────────────────
 
-function GlobalSummary({ results }: { results: any[] }) {
-  const totalHits = results.reduce((acc, r) => acc + r.hitCount, 0);
-  const totalChecked = results.reduce((acc, r) => acc + r.totalChecked, 0);
+function RoundSummary({ results }: { results: any[] }) {
+  const totalHits = results.reduce((acc: number, r: any) => acc + r.hitCount, 0);
+  const totalChecked = results.reduce((acc: number, r: any) => acc + r.totalChecked, 0);
   const rate = totalChecked > 0 ? Math.round((totalHits / totalChecked) * 100) : 0;
   const totalGames = results.length;
   
-  // Conta acertos por tipo
-  const resultHits = results.filter(r => r.resultHit).length;
-  const goalsHits = results.filter(r => r.goalsHit === true).length;
-  const bttsHits = results.filter(r => r.bttsHit === true).length;
-  const dcHits = results.filter(r => r.doubleChanceHit === true).length;
-  const htHits = results.filter(r => r.halfTimeHit === true).length;
-  const scoreHits = results.filter(r => r.scoreHit === true).length;
+  const resultHits = results.filter((r: any) => r.resultHit).length;
+  const scoreHits = results.filter((r: any) => r.scoreHit === true).length;
 
   const color = rate >= 55 ? 'from-emerald-600 to-teal-600' : rate >= 40 ? 'from-amber-600 to-orange-600' : 'from-slate-600 to-slate-700';
 
@@ -428,11 +421,11 @@ function GlobalSummary({ results }: { results: any[] }) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Brain size={18} />
-          <span className="font-bold text-sm">Desempenho Geral da IA</span>
+          <span className="font-bold text-sm">Desempenho da IA nesta rodada</span>
         </div>
         <div className="text-right">
           <span className="text-2xl font-black">{totalHits}/{totalChecked}</span>
-          <p className="text-[10px] text-white/70">acertos no total</p>
+          <p className="text-[10px] text-white/70">acertos na rodada</p>
         </div>
       </div>
       
@@ -454,6 +447,125 @@ function GlobalSummary({ results }: { results: any[] }) {
   );
 }
 
+// ─── Mensagem de Rodada Futura ──────────────────────────────────────────────
+
+function FutureRoundMessage({ round }: { round: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center py-16 gap-4"
+    >
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center shadow-lg">
+        <Clock size={28} className="text-white" />
+      </div>
+      <div className="text-center">
+        <p className="font-poppins font-black text-lg text-foreground">Rodada {round}</p>
+        <p className="text-muted-foreground text-sm mt-1">
+          Aguarde, esta rodada ainda não começou.
+        </p>
+        <p className="text-muted-foreground/60 text-xs mt-2">
+          Os resultados aparecerão aqui quando os jogos forem finalizados.
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Barra de Rodadas com Scroll ─────────────────────────────────────────────
+
+function RoundSelector({ 
+  selectedRound, 
+  onSelect, 
+  roundsWithData,
+  currentRound
+}: { 
+  selectedRound: number; 
+  onSelect: (round: number) => void;
+  roundsWithData: Map<number, { hits: number; total: number }>;
+  currentRound: number;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const selectedRef = useRef<HTMLButtonElement>(null);
+  const TOTAL_ROUNDS = 38;
+
+  // Scroll para a rodada selecionada quando montar
+  useEffect(() => {
+    if (selectedRef.current && scrollRef.current) {
+      const container = scrollRef.current;
+      const button = selectedRef.current;
+      const scrollLeft = button.offsetLeft - container.offsetWidth / 2 + button.offsetWidth / 2;
+      container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+    }
+  }, [selectedRound]);
+
+  const scrollBy = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const amount = direction === 'left' ? -200 : 200;
+      scrollRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <div className="relative mb-4">
+      {/* Setas de navegação */}
+      <button
+        onClick={() => scrollBy('left')}
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-background/90 border border-border shadow-md flex items-center justify-center hover:bg-muted transition-all"
+      >
+        <ChevronLeft size={14} />
+      </button>
+      <button
+        onClick={() => scrollBy('right')}
+        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-background/90 border border-border shadow-md flex items-center justify-center hover:bg-muted transition-all"
+      >
+        <ChevronRight size={14} />
+      </button>
+
+      {/* Lista de rodadas com scroll */}
+      <div 
+        ref={scrollRef}
+        className="flex gap-1.5 overflow-x-auto scrollbar-hide px-8 py-1"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {Array.from({ length: TOTAL_ROUNDS }, (_, i) => i + 1).map((round) => {
+          const data = roundsWithData.get(round);
+          const hasData = !!data;
+          const isSelected = selectedRound === round;
+          const isCurrent = round === currentRound;
+          
+          return (
+            <button
+              key={round}
+              ref={isSelected ? selectedRef : undefined}
+              onClick={() => onSelect(round)}
+              className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-semibold transition-all relative ${
+                isSelected
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md scale-105'
+                  : hasData
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
+                    : 'bg-muted text-muted-foreground/60 hover:bg-muted/80'
+              }`}
+            >
+              <span className="block text-[10px] leading-tight opacity-70">Rodada</span>
+              <span className="block text-base font-black leading-tight">{round}</span>
+              {hasData && !isSelected && (
+                <span className="block text-[8px] mt-0.5 opacity-70">{data.hits}/{data.total}</span>
+              )}
+              {isSelected && hasData && (
+                <span className="block text-[8px] mt-0.5 text-white/80">{data.hits}/{data.total}</span>
+              )}
+              {isCurrent && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background animate-pulse" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
 export function AIResults() {
@@ -462,28 +574,48 @@ export function AIResults() {
     refetchInterval: 5 * 60 * 1000,
   });
 
+  // Agrupar resultados por rodada
   const grouped = useMemo(() => {
-    if (!results || results.length === 0) return [];
-    const map = new Map<number | string, any[]>();
+    if (!results || results.length === 0) return new Map<number, any[]>();
+    const map = new Map<number, any[]>();
     for (const r of results) {
-      const key = r.matchday ?? 0;
+      const key = Number(r.matchday) || 0;
+      if (key === 0) continue;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(r);
     }
-    return Array.from(map.entries()).sort(([a], [b]) => Number(b) - Number(a));
+    return map;
   }, [results]);
 
-  const latestRound = grouped[0]?.[0] ?? 0;
-  const [selectedRound, setSelectedRound] = useState<number | string>(latestRound);
+  // Dados resumidos por rodada para o seletor
+  const roundsWithData = useMemo(() => {
+    const map = new Map<number, { hits: number; total: number }>();
+    grouped.forEach((rds, round) => {
+      const hits = rds.reduce((acc: number, r: any) => acc + r.hitCount, 0);
+      const total = rds.reduce((acc: number, r: any) => acc + r.totalChecked, 0);
+      map.set(round, { hits, total });
+    });
+    return map;
+  }, [grouped]);
 
+  // Detectar rodada atual (a maior rodada com dados)
+  const currentRound = useMemo(() => {
+    if (grouped.size === 0) return 1;
+    return Math.max(...Array.from(grouped.keys()));
+  }, [grouped]);
+
+  const [selectedRound, setSelectedRound] = useState<number>(0);
+
+  // Inicializar na rodada atual
   useEffect(() => {
-    if (latestRound !== 0 && selectedRound === 0) {
-      setSelectedRound(latestRound);
+    if (currentRound > 0 && selectedRound === 0) {
+      setSelectedRound(currentRound);
     }
-  }, [latestRound, selectedRound]);
+  }, [currentRound, selectedRound]);
 
+  // Resultados da rodada selecionada
   const currentResults = useMemo(() => {
-    return grouped.find(([r]) => r === selectedRound)?.[1] ?? [];
+    return grouped.get(selectedRound) ?? [];
   }, [grouped, selectedRound]);
 
   if (isLoading) {
@@ -521,49 +653,49 @@ export function AIResults() {
     );
   }
 
+  const hasDataForSelected = grouped.has(selectedRound);
+
   return (
     <div>
-      {/* Resumo geral */}
-      <GlobalSummary results={results} />
+      {/* Seletor de rodadas com scroll horizontal */}
+      <RoundSelector
+        selectedRound={selectedRound}
+        onSelect={setSelectedRound}
+        roundsWithData={roundsWithData}
+        currentRound={currentRound}
+      />
 
-      {/* Submenu de rodadas */}
-      {grouped.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide mb-4">
-          {grouped.map(([round, rds]) => {
-            const roundHits = rds.reduce((acc: number, r: any) => acc + r.hitCount, 0);
-            const roundTotal = rds.reduce((acc: number, r: any) => acc + r.totalChecked, 0);
-            return (
-              <button
-                key={round}
-                onClick={() => setSelectedRound(round)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  selectedRound === round
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                {Number(round) > 0 ? `Rodada ${round}` : 'Sem rodada'}
-                <span className="ml-1.5 opacity-70">({roundHits}/{roundTotal})</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Cards da rodada selecionada */}
+      {/* Conteúdo da rodada selecionada */}
       <AnimatePresence mode="wait">
-        <motion.div
-          key={String(selectedRound)}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
-          {currentResults.map((r: any, i: number) => (
-            <AIResultCard key={r.matchId} r={r} index={i} />
-          ))}
-        </motion.div>
+        {hasDataForSelected ? (
+          <motion.div
+            key={`round-${selectedRound}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            {/* Resumo da rodada */}
+            <RoundSummary results={currentResults} />
+
+            {/* Cards da rodada */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {currentResults.map((r: any, i: number) => (
+                <AIResultCard key={r.matchId} r={r} index={i} />
+              ))}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key={`future-${selectedRound}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <FutureRoundMessage round={selectedRound} />
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
