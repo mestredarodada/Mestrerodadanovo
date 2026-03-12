@@ -66,7 +66,7 @@ export const appRouter = router({
             const totalGoals = homeGoals + awayGoals;
             const actualResult = homeGoals > awayGoals ? 'HOME' : homeGoals < awayGoals ? 'AWAY' : 'DRAW';
 
-            // Verifica acertos
+            // ─── Verifica acertos em TODOS os mercados ───
             const resultHit = pred.main_prediction === actualResult;
 
             const goalsHit = (() => {
@@ -87,7 +87,52 @@ export const appRouter = router({
               return (pred.both_teams_to_score === 'YES') === actualBtts;
             })();
 
-            const hits = [resultHit, goalsHit, bttsHit].filter(v => v !== null);
+            // Dupla chance (ex: HOME_DRAW, HOME_AWAY, DRAW_AWAY)
+            const doubleChanceHit = (() => {
+              const dc = pred.double_chance;
+              if (!dc) return null;
+              if (dc === 'HOME_DRAW') return actualResult === 'HOME' || actualResult === 'DRAW';
+              if (dc === 'HOME_AWAY') return actualResult === 'HOME' || actualResult === 'AWAY';
+              if (dc === 'DRAW_AWAY') return actualResult === 'DRAW' || actualResult === 'AWAY';
+              // Tenta parsear formatos como "Flamengo ou Empate"
+              const dcLower = dc.toLowerCase();
+              if (dcLower.includes('empate')) {
+                if (actualResult === 'DRAW') return true;
+                if (actualResult === 'HOME' && dcLower.includes(pred.home_team_name?.toLowerCase()?.split(' ')[0])) return true;
+                if (actualResult === 'AWAY' && dcLower.includes(pred.away_team_name?.toLowerCase()?.split(' ')[0])) return true;
+              }
+              return null;
+            })();
+
+            // 1º Tempo (score do halfTime)
+            const halfTimeHit = (() => {
+              if (!pred.half_time_prediction) return null;
+              const htHome = match.score?.halfTime?.home;
+              const htAway = match.score?.halfTime?.away;
+              if (htHome === null || htHome === undefined || htAway === null || htAway === undefined) return null;
+              const htResult = htHome > htAway ? 'HOME' : htHome < htAway ? 'AWAY' : 'DRAW';
+              const htPred = pred.half_time_prediction;
+              if (htPred === 'HOME' || htPred === 'AWAY' || htPred === 'DRAW') {
+                return htPred === htResult;
+              }
+              // Formato texto: "Empate no 1ºT"
+              const htLower = htPred.toLowerCase();
+              if (htLower.includes('empate') && htResult === 'DRAW') return true;
+              if (htResult === 'HOME' && htLower.includes(pred.home_team_name?.toLowerCase()?.split(' ')[0])) return true;
+              if (htResult === 'AWAY' && htLower.includes(pred.away_team_name?.toLowerCase()?.split(' ')[0])) return true;
+              if (htLower.includes('empate') && htResult !== 'DRAW') return false;
+              return null;
+            })();
+
+            // Placar exato
+            const scoreHit = (() => {
+              if (!pred.likely_score) return null;
+              const parts = pred.likely_score.match(/(\d+)\s*[x×-]\s*(\d+)/);
+              if (!parts) return null;
+              return parseInt(parts[1]) === homeGoals && parseInt(parts[2]) === awayGoals;
+            })();
+
+            const hits = [resultHit, goalsHit, bttsHit, doubleChanceHit, halfTimeHit, scoreHit].filter(v => v !== null);
             const hitCount = hits.filter(Boolean).length;
             const totalChecked = hits.length;
 
@@ -103,18 +148,25 @@ export const appRouter = router({
               actualHomeGoals: homeGoals,
               actualAwayGoals: awayGoals,
               actualResult,
+              actualHalfTimeHome: match.score?.halfTime?.home ?? null,
+              actualHalfTimeAway: match.score?.halfTime?.away ?? null,
               // Palpites da IA
               mainPrediction: pred.main_prediction,
               goalsPrediction: pred.goals_prediction,
               bothTeamsToScore: pred.both_teams_to_score,
               cornersPrediction: pred.corners_prediction,
               cardsPrediction: pred.cards_prediction,
+              doubleChance: pred.double_chance,
+              halfTimePrediction: pred.half_time_prediction,
               bestBet: pred.best_bet,
               likelyScore: pred.likely_score,
               // Acertos
               resultHit,
               goalsHit,
               bttsHit,
+              doubleChanceHit,
+              halfTimeHit,
+              scoreHit,
               hitCount,
               totalChecked,
             };
