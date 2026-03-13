@@ -66,6 +66,16 @@ export const appRouter = router({
         `);
         const predictions = (result.rows || result as any[]);
 
+        // Debug: log para identificar o problema
+        const finishedIds = finishedMatches.map((m: any) => String(m.id));
+        const predictionIds = predictions.map((p: any) => String(p.match_id));
+        const matchingIds = predictionIds.filter((id: string) => finishedIds.includes(id));
+        console.log(`[AI-RESULTS] ${finishedMatches.length} jogos finalizados da API, ${predictions.length} palpites no banco, ${matchingIds.length} cruzamentos encontrados`);
+        if (matchingIds.length === 0 && finishedMatches.length > 0 && predictions.length > 0) {
+          console.log(`[AI-RESULTS] IDs finalizados (primeiros 5): ${finishedIds.slice(0, 5).join(', ')}`);
+          console.log(`[AI-RESULTS] IDs palpites (primeiros 5): ${predictionIds.slice(0, 5).join(', ')}`);
+        }
+
         // Cruza palpites com resultados reais
         const aiResults = predictions
           .map((pred: any) => {
