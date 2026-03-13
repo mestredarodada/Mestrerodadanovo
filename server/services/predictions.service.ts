@@ -154,14 +154,14 @@ async function fetchNextMatchWithoutPrediction(): Promise<any | null> {
     (a: any, b: any) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime()
   );
 
-  // Filtra apenas jogos nas próximas 48h
+  // Filtra apenas jogos nas próximas 24h
   const now = Date.now();
-  const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
   const allowedMatches = sortedMatches.filter(
-    (m: any) => new Date(m.utcDate).getTime() - now <= FORTY_EIGHT_HOURS
+    (m: any) => new Date(m.utcDate).getTime() - now <= TWENTY_FOUR_HOURS
   );
 
-  console.log(`[Mestre] ${allowedMatches.length} jogos nas próximas 48h (de ${scheduledMatches.length} total)`);
+  console.log(`[Mestre] ${allowedMatches.length} jogos nas próximas 24h (de ${scheduledMatches.length} total)`);
 
   for (const match of allowedMatches) {
     // ─── Cache inteligente: verifica se já existe palpite válido ───
