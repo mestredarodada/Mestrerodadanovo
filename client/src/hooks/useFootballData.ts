@@ -15,6 +15,12 @@ interface Match {
   stage?: string;
   homeTeam: Team;
   awayTeam: Team;
+  competition?: {
+    id?: number;
+    name?: string;
+    code?: string;
+    emblem?: string;
+  };
   score: {
     fullTime: {
       home: number | null;

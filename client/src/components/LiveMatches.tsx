@@ -115,7 +115,7 @@ function LiveMatchCard({ match, index, onViewPrediction }: { match: any; index: 
       {/* Footer */}
       <div className="px-4 py-2 border-t border-border/40 bg-muted/30">
         <p className="text-[10px] text-muted-foreground text-center">
-          Brasileirão Série A · {format(new Date(match.utcDate), "dd/MM 'às' HH:mm", { locale: ptBR })}
+          {match.competition?.name || 'Liga'} · {format(new Date(match.utcDate), "dd/MM 'às' HH:mm", { locale: ptBR })}
         </p>
       </div>
     </motion.div>
@@ -160,7 +160,7 @@ export function LiveMatches({ onViewPrediction }: { onViewPrediction?: () => voi
         <div className="text-center">
           <p className="font-poppins font-black text-xl text-foreground">Nenhum jogo ao vivo</p>
           <p className="text-muted-foreground text-sm mt-1.5 max-w-xs">
-            Não há jogos do Brasileirão Série A acontecendo no momento.
+            Não há jogos ao vivo no momento.
             <br />
             Esta página atualiza automaticamente a cada minuto.
           </p>

@@ -1,8 +1,9 @@
 import { useMatches } from '@/hooks/useFootballData';
 import { motion } from 'framer-motion';
 import { Calendar, Shield, Trophy } from 'lucide-react';
-import { parseISO, format } from 'date-fns';
+import { parseISO, format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useMemo } from 'react';
 
 // Skeleton loader
 function ResultCardSkeleton() {
@@ -28,6 +29,17 @@ function ResultCardSkeleton() {
 export default function RecentResults() {
   const { data: matches, loading, error } = useMatches('FINISHED');
 
+  // Filtra apenas jogos de ontem e hoje, ordena do mais recente para o mais antigo
+  const filteredMatches = useMemo(() => {
+    if (!matches) return [];
+    return matches
+      .filter((match) => {
+        const matchDate = parseISO(match.utcDate);
+        return isToday(matchDate) || isYesterday(matchDate);
+      })
+      .sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
+  }, [matches]);
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -45,18 +57,18 @@ export default function RecentResults() {
     );
   }
 
-  if (!matches || matches.length === 0) {
+  if (!filteredMatches || filteredMatches.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
         <Trophy size={40} className="opacity-30" />
-        <p>Nenhum resultado disponível no momento</p>
+        <p>Nenhum resultado de ontem ou hoje disponível</p>
       </div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {matches.slice(0, 12).map((match, index) => {
+      {filteredMatches.map((match, index) => {
         const homeScore = match.score.fullTime.home;
         const awayScore = match.score.fullTime.away;
         const isHomeWin = homeScore !== null && awayScore !== null && homeScore > awayScore;
@@ -65,6 +77,9 @@ export default function RecentResults() {
 
         const matchDate = parseISO(match.utcDate);
         const dateStr = format(matchDate, "dd 'de' MMM", { locale: ptBR });
+        const timeStr = format(matchDate, 'HH:mm', { locale: ptBR });
+        const dayLabel = isToday(matchDate) ? 'Hoje' : 'Ontem';
+        const competitionName = match.competition?.name || '';
 
         // Cor do placar
         const scoreGradient = isDraw
@@ -84,13 +99,17 @@ export default function RecentResults() {
             <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-4 py-2.5 flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-slate-300 text-xs">
                 <Calendar size={12} />
-                <span>{dateStr}</span>
+                <span>{dayLabel} · {dateStr} · {timeStr}</span>
               </div>
-              {match.matchday && (
+              {competitionName ? (
+                <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full truncate max-w-[140px]">
+                  {competitionName}
+                </span>
+              ) : match.matchday ? (
                 <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full">
                   Rodada {match.matchday}
                 </span>
-              )}
+              ) : null}
             </div>
 
             {/* Corpo */}
