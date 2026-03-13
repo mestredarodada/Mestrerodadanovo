@@ -9,6 +9,7 @@ import {
   Activity,
   Radio,
   Brain,
+  Send,
 } from 'lucide-react';
 import UpcomingMatches from '@/components/UpcomingMatches';
 import RecentResults from '@/components/RecentResults';
@@ -182,6 +183,36 @@ function Sidebar({
       </nav>
 
 
+
+      {/* Banner Telegram */}
+      <div className="px-3 pb-2">
+        <a
+          href="https://t.me/mestredarodada"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block w-full rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.02] active:scale-95"
+        >
+          {collapsed ? (
+            <div className="flex items-center justify-center p-2 bg-gradient-to-br from-[#229ED9] to-[#1a8bc7] rounded-xl shadow-lg">
+              <Send size={18} className="text-white" />
+            </div>
+          ) : (
+            <div className="bg-gradient-to-r from-[#229ED9] to-[#1a8bc7] px-3 py-2.5 rounded-xl shadow-lg">
+              <div className="flex items-center gap-2">
+                <Send size={16} className="text-white shrink-0" />
+                <div>
+                  <p className="text-[11px] font-bold text-white leading-tight">
+                    Canal do Telegram
+                  </p>
+                  <p className="text-[9px] text-white/70 leading-tight">
+                    Receba palpites em tempo real
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </a>
+      </div>
 
       {/* Toggle button */}
       <div className="p-3 border-t border-white/10">
@@ -482,6 +513,22 @@ export default function Home() {
               <div className="mt-4">
                 <HeroBanner onSelect={handleSelect} />
               </div>
+
+              {/* Banner Telegram (mobile) */}
+              <a
+                href="https://t.me/mestredarodada"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="md:hidden flex items-center gap-3 bg-gradient-to-r from-[#229ED9] to-[#1a8bc7] rounded-xl px-4 py-3 mb-6 shadow-lg hover:opacity-90 active:scale-[0.98] transition-all"
+              >
+                <Send size={20} className="text-white shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-white leading-tight">Canal do Telegram</p>
+                  <p className="text-[11px] text-white/70 leading-tight">Receba palpites em tempo real no Telegram</p>
+                </div>
+                <ChevronRight size={18} className="text-white/60 shrink-0" />
+              </a>
+
                 <SectionHeader item={currentNav} />
                 <Predictions />
               </motion.div>
