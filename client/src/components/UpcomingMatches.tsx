@@ -1,8 +1,9 @@
-import { useMatches } from '@/hooks/useFootballData';
+import { trpc } from '@/lib/trpc';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, Shield, Swords } from 'lucide-react';
-import { formatDistanceToNow, parseISO, format } from 'date-fns';
+import { Calendar, Clock, Shield, Swords, Sparkles } from 'lucide-react';
+import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useMemo } from 'react';
 
 // Skeleton loader
 function MatchCardSkeleton() {
@@ -26,9 +27,22 @@ function MatchCardSkeleton() {
 }
 
 export default function UpcomingMatches() {
-  const { data: matches, loading, error } = useMatches('SCHEDULED');
+  // Usa a rota predictions que retorna apenas jogos com palpite do Mestre
+  const { data: predictions, isLoading, error } = trpc.football.predictions.useQuery(undefined, {
+    staleTime: 0,
+    refetchInterval: 5 * 60 * 1000,
+  });
 
-  if (loading) {
+  // Filtra apenas jogos futuros (agendados), ordena do mais próximo para o mais distante
+  const upcomingPredictions = useMemo(() => {
+    if (!predictions || predictions.length === 0) return [];
+    const now = new Date().getTime();
+    return predictions
+      .filter((p: any) => new Date(p.matchDate).getTime() > now)
+      .sort((a: any, b: any) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+  }, [predictions]);
+
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from({ length: 6 }).map((_, i) => <MatchCardSkeleton key={i} />)}
@@ -40,34 +54,36 @@ export default function UpcomingMatches() {
     return (
       <div className="flex flex-col items-center gap-3 py-12 text-center">
         <Swords className="text-red-400" size={40} />
-        <p className="text-red-600 font-medium">{error}</p>
+        <p className="text-red-600 font-medium">Erro ao carregar próximos jogos</p>
       </div>
     );
   }
 
-  if (!matches || matches.length === 0) {
+  if (!upcomingPredictions || upcomingPredictions.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
         <Calendar size={40} className="opacity-30" />
-        <p>Nenhum jogo agendado no momento</p>
+        <p className="font-poppins font-bold text-foreground">Nenhum jogo agendado com palpite</p>
+        <p className="text-sm">Quando o Mestre gerar palpites para os próximos jogos, eles aparecerão aqui.</p>
       </div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {matches.slice(0, 12).map((match, index) => {
-        const matchDate = parseISO(match.utcDate);
+      {upcomingPredictions.map((pred: any, index: number) => {
+        const matchDate = new Date(pred.matchDate);
         const timeUntil = formatDistanceToNow(matchDate, {
           addSuffix: true,
           locale: ptBR,
         });
         const dateStr = format(matchDate, "dd 'de' MMM", { locale: ptBR });
         const timeStr = format(matchDate, 'HH:mm', { locale: ptBR });
+        const competitionName = pred.competitionName || '';
 
         return (
           <motion.div
-            key={match.id}
+            key={pred.matchId}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05, duration: 0.35 }}
@@ -82,11 +98,15 @@ export default function UpcomingMatches() {
                 <Clock size={12} className="ml-1" />
                 <span>{timeStr}</span>
               </div>
-              {match.matchday && (
-                <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full">
-                  Rodada {match.matchday}
+              {competitionName ? (
+                <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full truncate max-w-[140px]">
+                  {competitionName}
                 </span>
-              )}
+              ) : pred.matchday ? (
+                <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full">
+                  Rodada {pred.matchday}
+                </span>
+              ) : null}
             </div>
 
             {/* Corpo do card */}
@@ -94,10 +114,10 @@ export default function UpcomingMatches() {
               <div className="flex items-center justify-between gap-3">
                 {/* Time da casa */}
                 <div className="flex-1 flex flex-col items-center gap-2 text-center">
-                  {match.homeTeam.crest ? (
+                  {pred.homeTeamCrest ? (
                     <img
-                      src={match.homeTeam.crest}
-                      alt={match.homeTeam.name}
+                      src={pred.homeTeamCrest}
+                      alt={pred.homeTeamName}
                       className="w-12 h-12 object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-300"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
@@ -109,7 +129,7 @@ export default function UpcomingMatches() {
                     </div>
                   )}
                   <p className="font-poppins font-bold text-foreground text-xs leading-tight">
-                    {match.homeTeam.shortName || match.homeTeam.name}
+                    {pred.homeTeamName}
                   </p>
                 </div>
 
@@ -125,10 +145,10 @@ export default function UpcomingMatches() {
 
                 {/* Time visitante */}
                 <div className="flex-1 flex flex-col items-center gap-2 text-center">
-                  {match.awayTeam.crest ? (
+                  {pred.awayTeamCrest ? (
                     <img
-                      src={match.awayTeam.crest}
-                      alt={match.awayTeam.name}
+                      src={pred.awayTeamCrest}
+                      alt={pred.awayTeamName}
                       className="w-12 h-12 object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-300"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
@@ -140,10 +160,18 @@ export default function UpcomingMatches() {
                     </div>
                   )}
                   <p className="font-poppins font-bold text-foreground text-xs leading-tight">
-                    {match.awayTeam.shortName || match.awayTeam.name}
+                    {pred.awayTeamName}
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Footer com indicação de palpite do Mestre */}
+            <div className="px-4 py-2 border-t border-border/40 bg-purple-500/5 flex items-center justify-center gap-1.5">
+              <Sparkles size={12} className="text-purple-500" />
+              <span className="text-[11px] font-bold text-purple-500">
+                Palpite do Mestre disponível
+              </span>
             </div>
           </motion.div>
         );

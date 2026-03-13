@@ -1,6 +1,6 @@
-import { useMatches } from '@/hooks/useFootballData';
+import { trpc } from '@/lib/trpc';
 import { motion } from 'framer-motion';
-import { Calendar, Shield, Trophy } from 'lucide-react';
+import { Calendar, Shield, Trophy, CheckCircle2, XCircle } from 'lucide-react';
 import { parseISO, format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useMemo } from 'react';
@@ -27,20 +27,24 @@ function ResultCardSkeleton() {
 }
 
 export default function RecentResults() {
-  const { data: matches, loading, error } = useMatches('FINISHED');
+  // Usa a rota aiResults que já cruza palpites com resultados reais
+  const { data: results, isLoading, error } = trpc.football.aiResults.useQuery(undefined, {
+    staleTime: 0,
+    refetchInterval: 5 * 60 * 1000,
+  });
 
-  // Filtra apenas jogos de ontem e hoje, ordena do mais recente para o mais antigo
-  const filteredMatches = useMemo(() => {
-    if (!matches) return [];
-    return matches
-      .filter((match) => {
-        const matchDate = parseISO(match.utcDate);
+  // Filtra apenas ontem e hoje, ordena do mais recente para o mais antigo
+  const filteredResults = useMemo(() => {
+    if (!results || results.length === 0) return [];
+    return results
+      .filter((r: any) => {
+        const matchDate = new Date(r.matchDate);
         return isToday(matchDate) || isYesterday(matchDate);
       })
-      .sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
-  }, [matches]);
+      .sort((a: any, b: any) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
+  }, [results]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from({ length: 6 }).map((_, i) => <ResultCardSkeleton key={i} />)}
@@ -52,43 +56,49 @@ export default function RecentResults() {
     return (
       <div className="flex flex-col items-center gap-3 py-12 text-center">
         <Trophy className="text-red-400" size={40} />
-        <p className="text-red-600 font-medium">{error}</p>
+        <p className="text-red-600 font-medium">Erro ao carregar resultados</p>
       </div>
     );
   }
 
-  if (!filteredMatches || filteredMatches.length === 0) {
+  if (!filteredResults || filteredResults.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
         <Trophy size={40} className="opacity-30" />
-        <p>Nenhum resultado de ontem ou hoje disponível</p>
+        <p className="font-poppins font-bold text-foreground">Nenhum resultado disponível</p>
+        <p className="text-sm">Quando os jogos com palpites do Mestre forem finalizados, os resultados aparecerão aqui.</p>
       </div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {filteredMatches.map((match, index) => {
-        const homeScore = match.score.fullTime.home;
-        const awayScore = match.score.fullTime.away;
+      {filteredResults.map((r: any, index: number) => {
+        const homeScore = r.actualHomeGoals;
+        const awayScore = r.actualAwayGoals;
         const isHomeWin = homeScore !== null && awayScore !== null && homeScore > awayScore;
         const isAwayWin = homeScore !== null && awayScore !== null && awayScore > homeScore;
         const isDraw = homeScore !== null && awayScore !== null && homeScore === awayScore;
 
-        const matchDate = parseISO(match.utcDate);
+        const matchDate = new Date(r.matchDate);
         const dateStr = format(matchDate, "dd 'de' MMM", { locale: ptBR });
         const timeStr = format(matchDate, 'HH:mm', { locale: ptBR });
         const dayLabel = isToday(matchDate) ? 'Hoje' : 'Ontem';
-        const competitionName = match.competition?.name || '';
+        const competitionName = r.competitionName || '';
 
         // Cor do placar
         const scoreGradient = isDraw
           ? 'from-yellow-500 to-yellow-600'
           : 'from-[#1E40AF] to-[#1e3a8a]';
 
+        // Taxa de acerto
+        const hitRate = r.totalChecked > 0 ? Math.round((r.hitCount / r.totalChecked) * 100) : 0;
+        const hitColor = hitRate >= 60 ? 'text-emerald-500' : hitRate >= 40 ? 'text-amber-500' : 'text-red-400';
+        const hitBg = hitRate >= 60 ? 'bg-emerald-500/10' : hitRate >= 40 ? 'bg-amber-500/10' : 'bg-red-400/10';
+
         return (
           <motion.div
-            key={match.id}
+            key={r.matchId}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05, duration: 0.35 }}
@@ -105,10 +115,6 @@ export default function RecentResults() {
                 <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full truncate max-w-[140px]">
                   {competitionName}
                 </span>
-              ) : match.matchday ? (
-                <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full">
-                  Rodada {match.matchday}
-                </span>
               ) : null}
             </div>
 
@@ -117,10 +123,10 @@ export default function RecentResults() {
               <div className="flex items-center justify-between gap-3">
                 {/* Time da casa */}
                 <div className={`flex-1 flex flex-col items-center gap-2 text-center ${isHomeWin ? 'opacity-100' : isAwayWin ? 'opacity-50' : 'opacity-100'}`}>
-                  {match.homeTeam.crest ? (
+                  {r.homeTeamCrest ? (
                     <img
-                      src={match.homeTeam.crest}
-                      alt={match.homeTeam.name}
+                      src={r.homeTeamCrest}
+                      alt={r.homeTeamName}
                       className={`w-12 h-12 object-contain drop-shadow-sm transition-transform duration-300 ${isHomeWin ? 'group-hover:scale-110' : ''}`}
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
@@ -132,7 +138,7 @@ export default function RecentResults() {
                     </div>
                   )}
                   <p className={`font-poppins font-bold text-xs leading-tight ${isHomeWin ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
-                    {match.homeTeam.shortName || match.homeTeam.name}
+                    {r.homeTeamName}
                   </p>
                   {isHomeWin && (
                     <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-wide">
@@ -159,10 +165,10 @@ export default function RecentResults() {
 
                 {/* Time visitante */}
                 <div className={`flex-1 flex flex-col items-center gap-2 text-center ${isAwayWin ? 'opacity-100' : isHomeWin ? 'opacity-50' : 'opacity-100'}`}>
-                  {match.awayTeam.crest ? (
+                  {r.awayTeamCrest ? (
                     <img
-                      src={match.awayTeam.crest}
-                      alt={match.awayTeam.name}
+                      src={r.awayTeamCrest}
+                      alt={r.awayTeamName}
                       className={`w-12 h-12 object-contain drop-shadow-sm transition-transform duration-300 ${isAwayWin ? 'group-hover:scale-110' : ''}`}
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
@@ -174,7 +180,7 @@ export default function RecentResults() {
                     </div>
                   )}
                   <p className={`font-poppins font-bold text-xs leading-tight ${isAwayWin ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
-                    {match.awayTeam.shortName || match.awayTeam.name}
+                    {r.awayTeamName}
                   </p>
                   {isAwayWin && (
                     <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-wide">
@@ -183,6 +189,23 @@ export default function RecentResults() {
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Footer com taxa de acerto do Mestre */}
+            <div className={`px-4 py-2.5 border-t border-border/40 ${hitBg} flex items-center justify-between`}>
+              <div className="flex items-center gap-1.5">
+                {hitRate >= 60 ? (
+                  <CheckCircle2 size={14} className={hitColor} />
+                ) : (
+                  <XCircle size={14} className={hitColor} />
+                )}
+                <span className={`text-xs font-bold ${hitColor}`}>
+                  {r.hitCount}/{r.totalChecked} acertos
+                </span>
+              </div>
+              <span className={`text-xs font-black ${hitColor}`}>
+                {hitRate}%
+              </span>
             </div>
           </motion.div>
         );

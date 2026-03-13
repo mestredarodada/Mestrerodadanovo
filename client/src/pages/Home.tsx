@@ -64,7 +64,7 @@ const navItems: NavItem[] = [
     shortLabel: 'Próximos',
     icon: Calendar,
     gradient: 'from-orange-500 to-orange-600',
-    description: 'Próximos jogos de todas as ligas',
+    description: 'Próximos jogos com palpites do Mestre',
   },
   {
     id: 'results',
@@ -72,7 +72,7 @@ const navItems: NavItem[] = [
     shortLabel: 'Result.',
     icon: Activity,
     gradient: 'from-emerald-500 to-emerald-600',
-    description: 'Últimos resultados de todas as ligas',
+    description: 'Resultados dos jogos com palpites do Mestre',
   },
 ];
 
