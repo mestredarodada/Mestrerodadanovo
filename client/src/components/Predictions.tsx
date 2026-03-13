@@ -23,7 +23,7 @@ import {
   Copy,
   CheckCircle,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isToday, isTomorrow, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const AFFILIATE_LINK = 'https://1wrlst.com/?open=register&p=c2f3';
@@ -458,15 +458,24 @@ export function Predictions() {
     refetchInterval: 5 * 60 * 1000,
   });
 
-  // Ordena palpites por data crescente (próximo jogo primeiro)
-  const sortedPredictions = useMemo(() => {
+  const [activeTab, setActiveTab] = useState<'today' | 'tomorrow'>('today');
+
+  // Filtra e ordena palpites por Hoje ou Amanhã
+  const todayPredictions = useMemo(() => {
     if (!predictions || predictions.length === 0) return [];
-    return [...predictions].sort((a: any, b: any) => {
-      const dateA = a.matchDate ? new Date(a.matchDate).getTime() : 0;
-      const dateB = b.matchDate ? new Date(b.matchDate).getTime() : 0;
-      return dateA - dateB;
-    });
+    return [...predictions]
+      .filter((p: any) => p.matchDate && isToday(new Date(p.matchDate)))
+      .sort((a: any, b: any) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
   }, [predictions]);
+
+  const tomorrowPredictions = useMemo(() => {
+    if (!predictions || predictions.length === 0) return [];
+    return [...predictions]
+      .filter((p: any) => p.matchDate && isTomorrow(new Date(p.matchDate)))
+      .sort((a: any, b: any) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+  }, [predictions]);
+
+  const activePredictions = activeTab === 'today' ? todayPredictions : tomorrowPredictions;
 
   if (isLoading) {
     return (
@@ -550,17 +559,68 @@ export function Predictions() {
         </button>
       </div>
 
-      {/* Info: jogos de todas as ligas */}
-      <p className="text-xs text-muted-foreground mb-2">
-        Palpites para jogos de todas as ligas cobertas pelo Mestre.
-      </p>
-
-      {/* Cards de palpites */}
-      <div className="grid grid-cols-1 gap-4">
-        {sortedPredictions.map((prediction: any) => (
-          <PredictionCard key={prediction.id} prediction={prediction} />
-        ))}
+      {/* Sub-menu Hoje / Amanhã */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setActiveTab('today')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
+            activeTab === 'today'
+              ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md shadow-purple-500/20'
+              : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border'
+          }`}
+        >
+          <Clock size={14} />
+          Hoje
+          {todayPredictions.length > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+              activeTab === 'today' ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
+            }`}>
+              {todayPredictions.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('tomorrow')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
+            activeTab === 'tomorrow'
+              ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md shadow-purple-500/20'
+              : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border'
+          }`}
+        >
+          <Star size={14} />
+          Amanhã
+          {tomorrowPredictions.length > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+              activeTab === 'tomorrow' ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
+            }`}>
+              {tomorrowPredictions.length}
+            </span>
+          )}
+        </button>
       </div>
+
+      {/* Cards de palpites filtrados */}
+      {activePredictions.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4">
+          {activePredictions.map((prediction: any) => (
+            <PredictionCard key={prediction.id} prediction={prediction} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-12 gap-3">
+          <Clock size={36} className="text-muted-foreground/50" />
+          <div className="text-center">
+            <p className="font-semibold text-foreground text-sm">
+              {activeTab === 'today' ? 'Nenhum palpite para hoje' : 'Nenhum palpite para amanhã ainda'}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {activeTab === 'today'
+                ? 'Os palpites de hoje já foram finalizados ou ainda serão gerados.'
+                : 'Os palpites de amanhã serão gerados automaticamente nas próximas horas.'}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
