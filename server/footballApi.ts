@@ -306,16 +306,6 @@ export async function getFinishedMatchesByCompetition(competitionCode: string, l
 
 // ─── Funções de compatibilidade (mantém BSA como fallback) ───────────────────
 
-export async function getStandings() {
-  const data = await footballApiGet(
-    `${BASE_URL}/competitions/BSA/standings`,
-    {},
-    'standings_BSA',
-    CACHE_TTL.STATIC_DATA
-  );
-  return data.standings?.[0]?.table || [];
-}
-
 export async function getMatches(status: string) {
   return getMatchesByCompetition('BSA', status);
 }

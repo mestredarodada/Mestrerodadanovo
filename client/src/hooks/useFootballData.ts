@@ -27,34 +27,11 @@ interface Match {
   };
 }
 
-interface Standing {
-  position: number;
-  team: Team;
-  playedGames: number;
-  won: number;
-  draw: number;
-  lost: number;
-  points: number;
-  goalDifference: number;
-  goalsFor: number;
-  goalsAgainst: number;
-}
-
 interface ApiResponse<T> {
   data: T | null;
   loading: boolean;
   error: string | null;
 }
-
-export const useStandings = (): ApiResponse<Standing[]> => {
-  const { data, isLoading, error } = trpc.football.standings.useQuery();
-
-  return {
-    data: data || null,
-    loading: isLoading,
-    error: error?.message || null,
-  };
-};
 
 export const useMatches = (status: 'SCHEDULED' | 'FINISHED' | 'IN_PLAY' = 'SCHEDULED'): ApiResponse<Match[]> => {
   const { data, isLoading, error } = trpc.football.matches.useQuery({ status }, { staleTime: 0 });

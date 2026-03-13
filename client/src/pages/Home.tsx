@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy,
   Calendar,
-  BarChart3,
   Sparkles,
   ChevronLeft,
   ChevronRight,
@@ -11,7 +10,6 @@ import {
   Radio,
   Brain,
 } from 'lucide-react';
-import Standings from '@/components/Standings';
 import UpcomingMatches from '@/components/UpcomingMatches';
 import RecentResults from '@/components/RecentResults';
 import { Predictions } from '@/components/Predictions';
@@ -21,7 +19,7 @@ import PlayStoreBanner from '@/components/PlayStoreBanner';
 
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
-type Section = 'predictions' | 'live' | 'ai-results' | 'standings' | 'upcoming' | 'results';
+type Section = 'predictions' | 'live' | 'ai-results' | 'upcoming' | 'results';
 
 interface NavItem {
   id: Section;
@@ -59,14 +57,6 @@ const navItems: NavItem[] = [
     icon: Brain,
     gradient: 'from-violet-600 to-indigo-600',
     description: 'O que a IA acertou nos jogos finalizados',
-  },
-  {
-    id: 'standings',
-    label: 'Classificação',
-    shortLabel: 'Classif.',
-    icon: BarChart3,
-    gradient: 'from-blue-600 to-blue-700',
-    description: 'Tabela de classificação',
   },
   {
     id: 'upcoming',
@@ -363,11 +353,11 @@ function QuickStats({ onSelect }: { onSelect: (s: Section) => void }) {
       mascote: false,
     },
     {
-      id: 'standings' as Section,
-      icon: BarChart3,
-      label: 'Classificação',
-      gradient: 'from-blue-600 to-blue-700',
-      description: 'Tabela atualizada',
+      id: 'upcoming' as Section,
+      icon: Calendar,
+      label: 'Próximos Jogos',
+      gradient: 'from-orange-500 to-orange-600',
+      description: 'Próximos jogos',
       mascote: false,
     },
   ];
@@ -516,18 +506,6 @@ export default function Home() {
               >
                 <SectionHeader item={currentNav} />
                 <AIResults />
-              </motion.div>
-            ) : activeSection === 'standings' ? (
-              <motion.div
-                key="standings"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -16 }}
-                transition={{ duration: 0.3 }}
-              >
-                <QuickStats onSelect={handleSelect} />
-                <SectionHeader item={currentNav} />
-                <Standings />
               </motion.div>
             ) : activeSection === 'upcoming' ? (
               <motion.div

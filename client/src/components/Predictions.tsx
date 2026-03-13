@@ -255,7 +255,6 @@ function MarketItem({
 
 function PredictionCard({ prediction }: { prediction: any }) {
   const [expanded, setExpanded] = useState(false);
-  const [analysisOpen, setAnalysisOpen] = useState(false);
   const isApp = useIsAppWebView();
 
   const home = prediction.homeTeamName || 'Time A';
@@ -460,37 +459,6 @@ function PredictionCard({ prediction }: { prediction: any }) {
 
               {/* Botões de compartilhamento */}
               <ShareButtons prediction={prediction} />
-
-              {/* Análise expansível */}
-              {prediction.justification && (
-                <div className="border-t border-border/60">
-                  <button
-                    onClick={() => setAnalysisOpen(!analysisOpen)}
-                    className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-colors py-2.5 px-4"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <Sparkles size={12} />
-                      Análise completa do Mestre
-                    </span>
-                    {analysisOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </button>
-                  <AnimatePresence>
-                    {analysisOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <p className="text-xs text-muted-foreground leading-relaxed px-4 pb-4">
-                          {prediction.justification}
-                        </p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
             </div>
           </motion.div>
         )}

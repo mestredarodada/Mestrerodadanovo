@@ -2,7 +2,6 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { 
-  getStandings, 
   getAllLiveMatches, 
   getAllMatches, 
   getAllFinishedMatches,
@@ -15,15 +14,6 @@ export const appRouter = router({
   system: systemRouter,
 
   football: router({
-    standings: publicProcedure.query(async () => {
-      try {
-        return await getStandings();
-      } catch (error) {
-        console.error('Erro ao carregar classificação:', error);
-        throw new Error('Falha ao carregar classificação');
-      }
-    }),
-
     matches: publicProcedure
       .input(z.object({ status: z.enum(['SCHEDULED', 'FINISHED', 'IN_PLAY']).default('SCHEDULED') }))
       .query(async ({ input }) => {
