@@ -75,11 +75,11 @@ function setCache<T>(key: string, data: T, ttlMs: number): void {
 export const CACHE_TTL = {
   MATCHES_SCHEDULED: 5 * 60 * 1000,   // 5 minutos - próximos jogos
   MATCHES_LIVE: 30 * 1000,            // 30 segundos - jogos ao vivo
-  MATCHES_FINISHED: 10 * 60 * 1000,   // 10 minutos - resultados
+  MATCHES_FINISHED: 2 * 60 * 1000,    // 2 minutos - resultados (reduzido para pegar jogos recém-finalizados)
   MATCHES_ALL: 2 * 60 * 1000,         // 2 minutos - todos os jogos
   MATCHES_BATCH: 10 * 60 * 1000,      // 10 minutos - batch de jogos do dia
   PREDICTIONS: 2 * 60 * 1000,         // 2 minutos - palpites
-  AI_RESULTS: 5 * 60 * 1000,          // 5 minutos - resultados da IA
+  AI_RESULTS: 2 * 60 * 1000,          // 2 minutos - resultados da IA
   STATIC_DATA: 24 * 60 * 60 * 1000,   // 24 horas - dados estáticos (nomes, calendários)
   H2H: 12 * 60 * 60 * 1000,           // 12 horas - confrontos diretos
 };
