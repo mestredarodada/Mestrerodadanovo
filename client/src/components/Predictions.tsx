@@ -26,7 +26,7 @@ import {
 import { format, isToday, isTomorrow, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-const AFFILIATE_LINK = 'https://1wrlst.com/?open=register&p=c2f3';
+const AFFILIATE_LINK = 'https://1wfypv.com/?open=register&p=c2f3';
 
 
 
