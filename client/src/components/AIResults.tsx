@@ -1,8 +1,8 @@
 import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { CheckCircle2, XCircle, MinusCircle, Trophy, TrendingUp, Brain, Share2, Copy, CheckCircle, Target, Zap, Shield, Timer, CornerDownRight, CreditCard, Star, Clock, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
-import { format } from 'date-fns';
+import { useState, useMemo } from 'react';
+import { CheckCircle2, XCircle, Trophy, TrendingUp, Brain, Share2, Copy, CheckCircle, Target, Zap, Shield, Timer, CornerDownRight, CreditCard, Star, ChevronDown } from 'lucide-react';
+import { format, isToday, isYesterday, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const SITE_URL = 'https://www.mestredarodada.com.br';
@@ -146,8 +146,9 @@ function HitProgressBar({ hitCount, totalChecked }: { hitCount: number; totalChe
 function AIShareButtons({ r, hitCount, totalChecked }: { r: any; hitCount: number; totalChecked: number }) {
   const home = r.homeTeamName;
   const away = r.awayTeamName;
+  const compName = r.competitionName || '';
 
-  const text = `⚽ *${home} ${r.actualHomeGoals} x ${r.actualAwayGoals} ${away}*\n\n🤖 Análise do Mestre da Rodada:\n📊 Resultado: ${formatPrediction(r.mainPrediction, home, away)} ${r.resultHit ? '✅' : '❌'}\n⚽ Gols: ${formatPrediction(r.goalsPrediction, home, away)} ${r.goalsHit === true ? '✅' : r.goalsHit === false ? '❌' : ''}\n🎯 Ambas marcam: ${r.bothTeamsToScore === 'YES' ? 'SIM' : 'NÃO'} ${r.bttsHit === true ? '✅' : r.bttsHit === false ? '❌' : ''}\n${r.doubleChance ? `🛡️ Dupla chance: ${r.doubleChance} ${r.doubleChanceHit === true ? '✅' : r.doubleChanceHit === false ? '❌' : ''}\n` : ''}${r.halfTimePrediction ? `⏱️ 1º Tempo: ${r.halfTimePrediction} ${r.halfTimeHit === true ? '✅' : r.halfTimeHit === false ? '❌' : ''}\n` : ''}${r.scoreHit ? `🎯 PLACAR EXATO: ${r.likelyScore} ✅🔥\n` : ''}\n📈 *${hitCount} de ${totalChecked} acertos*\n\n🎰 Odds incríveis — Cadastre-se:\n${AFFILIATE_LINK}\n\n📲 Baixe o app oficial:\n${PLAYSTORE_LINK}\n\n🌐 ${SITE_URL}`;
+  const text = `⚽ *${home} ${r.actualHomeGoals} x ${r.actualAwayGoals} ${away}*${compName ? `\n🏆 ${compName}` : ''}\n\n🤖 Análise do Mestre da Rodada:\n📊 Resultado: ${formatPrediction(r.mainPrediction, home, away)} ${r.resultHit ? '✅' : '❌'}\n⚽ Gols: ${formatPrediction(r.goalsPrediction, home, away)} ${r.goalsHit === true ? '✅' : r.goalsHit === false ? '❌' : ''}\n🎯 Ambas marcam: ${r.bothTeamsToScore === 'YES' ? 'SIM' : 'NÃO'} ${r.bttsHit === true ? '✅' : r.bttsHit === false ? '❌' : ''}\n${r.doubleChance ? `🛡️ Dupla chance: ${r.doubleChance} ${r.doubleChanceHit === true ? '✅' : r.doubleChanceHit === false ? '❌' : ''}\n` : ''}${r.halfTimePrediction ? `⏱️ 1º Tempo: ${r.halfTimePrediction} ${r.halfTimeHit === true ? '✅' : r.halfTimeHit === false ? '❌' : ''}\n` : ''}${r.scoreHit ? `🎯 PLACAR EXATO: ${r.likelyScore} ✅🔥\n` : ''}\n📈 *${hitCount} de ${totalChecked} acertos*\n\n🎰 Odds incríveis — Cadastre-se:\n${AFFILIATE_LINK}\n\n📲 Baixe o app oficial:\n${PLAYSTORE_LINK}\n\n🌐 ${SITE_URL}`;
 
   const isApp = isAppWebView();
   const [copied, setCopied] = useState(false);
@@ -254,6 +255,15 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
       transition={{ delay: index * 0.06, duration: 0.4 }}
       className="bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-border/60 overflow-hidden"
     >
+      {/* Nome do campeonato no topo */}
+      {r.competitionName && (
+        <div className="bg-gradient-to-r from-blue-600/10 to-purple-600/10 px-4 py-1.5 border-b border-border/30">
+          <p className="text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">
+            {r.competitionName}
+          </p>
+        </div>
+      )}
+
       {/* Header com placar */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -279,7 +289,6 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
               {r.homeTeamName} <span className="text-white/40">×</span> {r.awayTeamName}
             </p>
             <p className="text-white/50 text-[10px]">
-              {r.matchday ? `Rodada ${r.matchday} · ` : ''}
               {format(new Date(r.matchDate), "dd/MM 'às' HH:mm", { locale: ptBR })}
             </p>
           </div>
@@ -305,11 +314,18 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
           </span>
         </div>
 
-        {/* Placar exato inline quando acerta */}
         {r.scoreHit && (
           <div className="mt-2 flex items-center gap-1.5 text-amber-500">
             <span className="text-sm">🎯</span>
             <span className="text-xs font-bold">Placar Exato! {r.likelyScore}</span>
+          </div>
+        )}
+
+        {/* Melhor aposta (sempre visível) */}
+        {r.bestBet && (
+          <div className="mt-2 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-1.5">
+            <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wide">⭐ Melhor Aposta</p>
+            <p className="text-xs text-foreground font-medium">{r.bestBet}</p>
           </div>
         )}
       </div>
@@ -339,10 +355,8 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
             className="overflow-hidden"
           >
             <div className="p-4 pt-2 border-t border-border/40">
-              {/* Barra de progresso de acertos */}
               <HitProgressBar hitCount={r.hitCount} totalChecked={r.totalChecked} />
 
-              {/* Placar exato - destaque especial quando acerta */}
               {r.scoreHit && (
                 <div className="mb-3 rounded-xl bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 px-3 py-2.5 flex items-center gap-2">
                   <span className="text-lg">🎯</span>
@@ -353,7 +367,6 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
                 </div>
               )}
 
-              {/* Mercados verificáveis */}
               <div className="mb-2">
                 <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider mb-2">Mercados analisados</p>
                 
@@ -415,7 +428,6 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
                 )}
               </div>
 
-              {/* Mercados informativos (sem verificação possível) */}
               {(r.cornersPrediction || r.cardsPrediction) && (
                 <div className="mb-2">
                   <p className="text-[10px] font-bold text-blue-400/50 uppercase tracking-wider mb-2 mt-3">Previsões adicionais</p>
@@ -438,15 +450,6 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
                 </div>
               )}
 
-              {/* Melhor aposta */}
-              {r.bestBet && (
-                <div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2">
-                  <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wide mb-0.5">⭐ Melhor Aposta Prevista</p>
-                  <p className="text-sm text-foreground font-medium">{r.bestBet}</p>
-                </div>
-              )}
-
-              {/* Botões de compartilhar */}
               <AIShareButtons r={r} hitCount={r.hitCount} totalChecked={r.totalChecked} />
             </div>
           </motion.div>
@@ -456,9 +459,9 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
   );
 }
 
-// ─── Resumo da Rodada ────────────────────────────────────────────────────────
+// ─── Resumo do Dia ──────────────────────────────────────────────────────────
 
-function RoundSummary({ results }: { results: any[] }) {
+function DaySummary({ results }: { results: any[] }) {
   const totalHits = results.reduce((acc: number, r: any) => acc + r.hitCount, 0);
   const totalChecked = results.reduce((acc: number, r: any) => acc + r.totalChecked, 0);
   const rate = totalChecked > 0 ? Math.round((totalHits / totalChecked) * 100) : 0;
@@ -474,11 +477,11 @@ function RoundSummary({ results }: { results: any[] }) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Brain size={18} />
-          <span className="font-bold text-sm">Desempenho da IA nesta rodada</span>
+          <span className="font-bold text-sm">Desempenho da IA</span>
         </div>
         <div className="text-right">
           <span className="text-2xl font-black">{totalHits}/{totalChecked}</span>
-          <p className="text-[10px] text-white/70">acertos na rodada</p>
+          <p className="text-[10px] text-white/70">acertos no período</p>
         </div>
       </div>
       
@@ -500,144 +503,79 @@ function RoundSummary({ results }: { results: any[] }) {
   );
 }
 
-// ─── Constantes ─────────────────────────────────────────────────────────────
+// ─── Navegação Ontem / Hoje ─────────────────────────────────────────────────
 
-const FIRST_ROUND = 5; // App começou na rodada 5
-const TOTAL_ROUNDS = 38;
+type DayFilter = 'today' | 'yesterday';
 
-// ─── Mensagem de Rodada Futura ──────────────────────────────────────────────
+function DaySelector({ selected, onSelect, todayCount, yesterdayCount }: {
+  selected: DayFilter;
+  onSelect: (day: DayFilter) => void;
+  todayCount: number;
+  yesterdayCount: number;
+}) {
+  return (
+    <div className="flex gap-2 mb-5">
+      <button
+        onClick={() => onSelect('today')}
+        className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
+          selected === 'today'
+            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+        }`}
+      >
+        Resultados da IA hoje
+        {todayCount > 0 && (
+          <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
+            selected === 'today' ? 'bg-white/20' : 'bg-purple-500/10 text-purple-500'
+          }`}>
+            {todayCount}
+          </span>
+        )}
+      </button>
+      <button
+        onClick={() => onSelect('yesterday')}
+        className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
+          selected === 'yesterday'
+            ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg'
+            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+        }`}
+      >
+        Resultados da IA ontem
+        {yesterdayCount > 0 && (
+          <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
+            selected === 'yesterday' ? 'bg-white/20' : 'bg-violet-500/10 text-violet-500'
+          }`}>
+            {yesterdayCount}
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
 
-function FutureRoundMessage({ round, currentRound }: { round: number; currentRound: number }) {
-  const isPastWithoutData = round <= currentRound;
+// ─── Mensagem Sem Resultados ────────────────────────────────────────────────
+
+function NoResultsMessage({ day }: { day: DayFilter }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-16 gap-4"
     >
-      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${
-        isPastWithoutData 
-          ? 'bg-gradient-to-br from-amber-500 to-orange-600' 
-          : 'bg-gradient-to-br from-slate-600 to-slate-700'
-      }`}>
-        <Clock size={28} className="text-white" />
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center shadow-lg">
+        <Trophy size={28} className="text-white" />
       </div>
       <div className="text-center">
-        <p className="font-poppins font-black text-lg text-foreground">Rodada {round}</p>
-        {isPastWithoutData ? (
-          <>
-            <p className="text-muted-foreground text-sm mt-1">
-              Não há palpites registrados para esta rodada.
-            </p>
-            <p className="text-muted-foreground/60 text-xs mt-2">
-              O Mestre da Rodada começou a analisar a partir da Rodada {FIRST_ROUND}.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-muted-foreground text-sm mt-1">
-              Aguarde, esta rodada ainda não começou.
-            </p>
-            <p className="text-muted-foreground/60 text-xs mt-2">
-              Os resultados aparecerão aqui quando os jogos forem finalizados.
-            </p>
-          </>
-        )}
+        <p className="font-poppins font-black text-lg text-foreground">
+          {day === 'today' ? 'Sem resultados hoje' : 'Sem resultados ontem'}
+        </p>
+        <p className="text-muted-foreground text-sm mt-1">
+          {day === 'today'
+            ? 'Quando os jogos de hoje com palpites do Mestre forem finalizados, os resultados aparecerão aqui.'
+            : 'Não houve jogos finalizados com palpites do Mestre ontem.'}
+        </p>
       </div>
     </motion.div>
-  );
-}
-
-// ─── Barra de Rodadas com Scroll ─────────────────────────────────────────────
-
-function RoundSelector({ 
-  selectedRound, 
-  onSelect, 
-  roundsWithData,
-  currentRound
-}: { 
-  selectedRound: number; 
-  onSelect: (round: number) => void;
-  roundsWithData: Map<number, { hits: number; total: number }>;
-  currentRound: number;
-}) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const selectedRef = useRef<HTMLButtonElement>(null);
-
-  // Scroll para a rodada selecionada quando montar
-  useEffect(() => {
-    if (selectedRef.current && scrollRef.current) {
-      const container = scrollRef.current;
-      const button = selectedRef.current;
-      const scrollLeft = button.offsetLeft - container.offsetWidth / 2 + button.offsetWidth / 2;
-      container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
-    }
-  }, [selectedRound]);
-
-  const scrollBy = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const amount = direction === 'left' ? -200 : 200;
-      scrollRef.current.scrollBy({ left: amount, behavior: 'smooth' });
-    }
-  };
-
-  return (
-    <div className="relative mb-4">
-      {/* Setas de navegação */}
-      <button
-        onClick={() => scrollBy('left')}
-        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-background/90 border border-border shadow-md flex items-center justify-center hover:bg-muted transition-all"
-      >
-        <ChevronLeft size={14} />
-      </button>
-      <button
-        onClick={() => scrollBy('right')}
-        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-background/90 border border-border shadow-md flex items-center justify-center hover:bg-muted transition-all"
-      >
-        <ChevronRight size={14} />
-      </button>
-
-      {/* Lista de rodadas com scroll */}
-      <div 
-        ref={scrollRef}
-        className="flex gap-1.5 overflow-x-auto scrollbar-hide px-8 py-1"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {Array.from({ length: TOTAL_ROUNDS - FIRST_ROUND + 1 }, (_, i) => i + FIRST_ROUND).map((round) => {
-          const data = roundsWithData.get(round);
-          const hasData = !!data;
-          const isSelected = selectedRound === round;
-          const isCurrent = round === currentRound;
-          
-          return (
-            <button
-              key={round}
-              ref={isSelected ? selectedRef : undefined}
-              onClick={() => onSelect(round)}
-              className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-semibold transition-all relative ${
-                isSelected
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md scale-105'
-                  : hasData
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
-                    : 'bg-muted text-muted-foreground/60 hover:bg-muted/80'
-              }`}
-            >
-              <span className="block text-[10px] leading-tight opacity-70">Rodada</span>
-              <span className="block text-base font-black leading-tight">{round}</span>
-              {hasData && !isSelected && (
-                <span className="block text-[8px] mt-0.5 opacity-70">{data.hits}/{data.total}</span>
-              )}
-              {isSelected && hasData && (
-                <span className="block text-[8px] mt-0.5 text-white/80">{data.hits}/{data.total}</span>
-              )}
-              {isCurrent && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background animate-pulse" />
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 
@@ -649,49 +587,31 @@ export function AIResults() {
     refetchInterval: 5 * 60 * 1000,
   });
 
-  // Agrupar resultados por rodada
-  const grouped = useMemo(() => {
-    if (!results || results.length === 0) return new Map<number, any[]>();
-    const map = new Map<number, any[]>();
-    for (const r of results) {
-      const key = Number(r.matchday) || 0;
-      if (key === 0) continue;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(r);
-    }
-    return map;
+  const [selectedDay, setSelectedDay] = useState<DayFilter>('today');
+
+  // Filtrar resultados por dia (Hoje / Ontem)
+  const { todayResults, yesterdayResults } = useMemo(() => {
+    if (!results || results.length === 0) return { todayResults: [], yesterdayResults: [] };
+    
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+
+    const todayResults = results.filter((r: any) => {
+      const matchDate = new Date(r.matchDate);
+      return matchDate >= todayStart;
+    });
+
+    const yesterdayResults = results.filter((r: any) => {
+      const matchDate = new Date(r.matchDate);
+      return matchDate >= yesterdayStart && matchDate < todayStart;
+    });
+
+    return { todayResults, yesterdayResults };
   }, [results]);
 
-  // Dados resumidos por rodada para o seletor
-  const roundsWithData = useMemo(() => {
-    const map = new Map<number, { hits: number; total: number }>();
-    grouped.forEach((rds, round) => {
-      const hits = rds.reduce((acc: number, r: any) => acc + r.hitCount, 0);
-      const total = rds.reduce((acc: number, r: any) => acc + r.totalChecked, 0);
-      map.set(round, { hits, total });
-    });
-    return map;
-  }, [grouped]);
-
-  // Detectar rodada atual (a maior rodada com dados, mínimo FIRST_ROUND)
-  const currentRound = useMemo(() => {
-    if (grouped.size === 0) return FIRST_ROUND;
-    return Math.max(...Array.from(grouped.keys()));
-  }, [grouped]);
-
-  const [selectedRound, setSelectedRound] = useState<number>(0);
-
-  // SEMPRE inicializar na rodada atual (a mais recente com dados)
-  useEffect(() => {
-    if (currentRound >= FIRST_ROUND && selectedRound === 0) {
-      setSelectedRound(currentRound);
-    }
-  }, [currentRound]);
-
-  // Resultados da rodada selecionada
-  const currentResults = useMemo(() => {
-    return grouped.get(selectedRound) ?? [];
-  }, [grouped, selectedRound]);
+  const currentResults = selectedDay === 'today' ? todayResults : yesterdayResults;
 
   if (isLoading) {
     return (
@@ -728,32 +648,28 @@ export function AIResults() {
     );
   }
 
-  const hasDataForSelected = grouped.has(selectedRound);
-
   return (
     <div>
-      {/* Seletor de rodadas com scroll horizontal */}
-      <RoundSelector
-        selectedRound={selectedRound}
-        onSelect={setSelectedRound}
-        roundsWithData={roundsWithData}
-        currentRound={currentRound}
+      {/* Seletor Ontem / Hoje */}
+      <DaySelector
+        selected={selectedDay}
+        onSelect={setSelectedDay}
+        todayCount={todayResults.length}
+        yesterdayCount={yesterdayResults.length}
       />
 
-      {/* Conteúdo da rodada selecionada */}
+      {/* Conteúdo do dia selecionado */}
       <AnimatePresence mode="wait">
-        {hasDataForSelected ? (
+        {currentResults.length > 0 ? (
           <motion.div
-            key={`round-${selectedRound}`}
+            key={`day-${selectedDay}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
           >
-            {/* Resumo da rodada */}
-            <RoundSummary results={currentResults} />
+            <DaySummary results={currentResults} />
 
-            {/* Cards da rodada */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentResults.map((r: any, i: number) => (
                 <AIResultCard key={r.matchId} r={r} index={i} />
@@ -762,13 +678,13 @@ export function AIResults() {
           </motion.div>
         ) : (
           <motion.div
-            key={`future-${selectedRound}`}
+            key={`empty-${selectedDay}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
           >
-            <FutureRoundMessage round={selectedRound} currentRound={currentRound} />
+            <NoResultsMessage day={selectedDay} />
           </motion.div>
         )}
       </AnimatePresence>

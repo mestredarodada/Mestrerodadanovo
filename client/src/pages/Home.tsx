@@ -49,7 +49,7 @@ const navItems: NavItem[] = [
     shortLabel: 'Ao Vivo',
     icon: Radio,
     gradient: 'from-red-600 to-red-700',
-    description: 'Jogos do Brasileirão em andamento',
+    description: 'Jogos ao vivo de todas as ligas',
     badge: 'LIVE',
   },
   {
@@ -66,7 +66,7 @@ const navItems: NavItem[] = [
     shortLabel: 'Classif.',
     icon: BarChart3,
     gradient: 'from-blue-600 to-blue-700',
-    description: 'Tabela do Brasileirão Série A 2026',
+    description: 'Tabela de classificação',
   },
   {
     id: 'upcoming',
@@ -74,7 +74,7 @@ const navItems: NavItem[] = [
     shortLabel: 'Próximos',
     icon: Calendar,
     gradient: 'from-orange-500 to-orange-600',
-    description: 'Jogos agendados da rodada',
+    description: 'Próximos jogos de todas as ligas',
   },
   {
     id: 'results',
@@ -82,7 +82,7 @@ const navItems: NavItem[] = [
     shortLabel: 'Result.',
     icon: Activity,
     gradient: 'from-emerald-500 to-emerald-600',
-    description: 'Últimos resultados do campeonato',
+    description: 'Últimos resultados de todas as ligas',
   },
 ];
 
@@ -127,7 +127,7 @@ function Sidebar({
                 Mestre da Rodada
               </p>
               <p className="text-[10px] text-emerald-400 font-semibold whitespace-nowrap">
-                Brasileirão 2026
+                Palpites da Rodada
               </p>
             </motion.div>
           )}
@@ -296,7 +296,7 @@ function HeroBanner({ onSelect }: { onSelect: (s: Section) => void }) {
     >
       <img
         src="https://d2xsxph8kpxj0f.cloudfront.net/310419663031272454/KQQfAkhjN4gcfPPvcd5j9u/hero-football-data-R3ZyXPhske92JaHgTrZS6c.webp"
-        alt="Brasileirão Série A"
+        alt="Palpites da Rodada"
         className="w-full h-44 md:h-56 object-cover group-hover:scale-105 transition-transform duration-700"
       />
       <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a]/95 via-[#1E40AF]/70 to-transparent" />
@@ -307,7 +307,7 @@ function HeroBanner({ onSelect }: { onSelect: (s: Section) => void }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          Temporada 2026
+          Futebol Internacional
         </motion.p>
         <motion.h2
           className="font-poppins font-black text-white text-2xl md:text-4xl leading-tight mb-3"
@@ -315,9 +315,9 @@ function HeroBanner({ onSelect }: { onSelect: (s: Section) => void }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          Brasileirão
+          Palpites da
           <br />
-          <span className="text-[#FF8C00]">Série A</span>
+          <span className="text-[#FF8C00]">Rodada</span>
         </motion.h2>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -449,7 +449,7 @@ export default function Home() {
               <img src="/logo.png" alt="Mestre da Rodada" className="w-9 h-9 object-contain" />
               <div>
                 <p className="font-poppins font-black text-sm text-foreground leading-none">Mestre da Rodada</p>
-                <p className="text-[10px] text-muted-foreground">Brasileirão 2026</p>
+                <p className="text-[10px] text-muted-foreground">Palpites da Rodada</p>
               </div>
             </div>
             <div className="flex items-center gap-2">

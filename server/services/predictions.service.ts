@@ -2,23 +2,28 @@ import axios from 'axios';
 import { db } from '../db';
 import { predictionsSimple } from '../db/schema';
 import { eq, sql } from 'drizzle-orm';
+import {
+  getAllScheduledMatches,
+  getAllFinishedMatches,
+  getCompetitionName,
+  SUPPORTED_COMPETITIONS,
+  CACHE_TTL,
+  footballApiGet,
+} from '../footballApi';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'llama-3.3-70b-versatile';
 const FOOTBALL_BASE = 'https://api.football-data.org/v4';
 
-// ─── Cache em memória dos dados base ─────────────────────────────────────────
-// Evita requisições repetidas à API do football-data entre execuções do job.
-// Cache válido por 4 horas.
+// ─── Cache em memória dos dados base (por competição) ────────────────────────
 
 interface BaseDataCache {
-  standings: any[];
   finishedMatches: any[];
   fetchedAt: number;
 }
 
-let baseDataCache: BaseDataCache | null = null;
-const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 horas
+const baseDataCacheMap = new Map<string, BaseDataCache>();
+const BASE_CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 horas
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -27,9 +32,15 @@ function sleep(ms: number) {
 }
 
 function getFootballHeaders() {
-  const key = process.env.FOOTBALL_DATA_API_KEY || '';
-  if (!key) throw new Error('FOOTBALL_DATA_API_KEY não configurada');
-  return { 'X-Auth-Token': key };
+  const keys = [
+    process.env.FOOTBALL_DATA_API_KEY,
+    process.env.FOOTBALL_DATA_API_KEY_2,
+    process.env.FOOTBALL_DATA_API_KEY_3,
+  ].filter(Boolean) as string[];
+  if (keys.length === 0) throw new Error('FOOTBALL_DATA_API_KEY não configurada');
+  // Rotação simples
+  const idx = Math.floor(Math.random() * keys.length);
+  return { 'X-Auth-Token': keys[idx] };
 }
 
 function buildFormString(matches: any[], teamId: number): string {
@@ -48,6 +59,27 @@ function buildFormString(matches: any[], teamId: number): string {
     if (isHome) return hg > ag ? 'V' : hg === ag ? 'E' : 'D';
     return ag > hg ? 'V' : ag === hg ? 'E' : 'D';
   }).join('');
+}
+
+function buildLast5Details(matches: any[], teamId: number): string {
+  const sorted = [...matches]
+    .filter(m => m.status === 'FINISHED' &&
+      (m.homeTeam.id === teamId || m.awayTeam.id === teamId))
+    .sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime())
+    .slice(0, 5);
+
+  if (sorted.length === 0) return 'Sem dados recentes';
+
+  return sorted.map(m => {
+    const isHome = m.homeTeam.id === teamId;
+    const hg = m.score?.fullTime?.home ?? 0;
+    const ag = m.score?.fullTime?.away ?? 0;
+    const opponent = isHome ? m.awayTeam.name : m.homeTeam.name;
+    const score = isHome ? `${hg}x${ag}` : `${ag}x${hg}`;
+    const result = isHome ? (hg > ag ? 'V' : hg === ag ? 'E' : 'D') : (ag > hg ? 'V' : ag === hg ? 'E' : 'D');
+    const local = isHome ? '(casa)' : '(fora)';
+    return `${result} ${score} vs ${opponent} ${local}`;
+  }).join(' | ');
 }
 
 function calcGoalAverages(matches: any[], teamId: number, last = 5) {
@@ -70,103 +102,89 @@ function calcGoalAverages(matches: any[], teamId: number, last = 5) {
   }
 
   return {
-    scored: +(scored / finished.length).toFixed(1),
-    conceded: +(conceded / finished.length).toFixed(1),
+    scored: +(scored / finished.length).toFixed(2),
+    conceded: +(conceded / finished.length).toFixed(2),
     btts: Math.round((bttsCount / finished.length) * 100),
     games: finished.length,
   };
 }
 
-// ─── Buscar dados base com cache ──────────────────────────────────────────────
+// ─── Buscar dados base por competição (com cache) ────────────────────────────
 
-async function getBaseData(): Promise<{ standings: any[]; finishedMatches: any[] }> {
+async function getBaseDataForCompetition(competitionCode: string): Promise<{ finishedMatches: any[] }> {
   const now = Date.now();
+  const cached = baseDataCacheMap.get(competitionCode);
 
-  // Retorna do cache se ainda válido
-  if (baseDataCache && (now - baseDataCache.fetchedAt) < CACHE_TTL_MS) {
-    const ageMin = Math.round((now - baseDataCache.fetchedAt) / 60000);
-    console.log(`[Mestre] Usando cache de dados base (${ageMin} min atrás)`);
-    return { standings: baseDataCache.standings, finishedMatches: baseDataCache.finishedMatches };
+  if (cached && (now - cached.fetchedAt) < BASE_CACHE_TTL_MS) {
+    const ageMin = Math.round((now - cached.fetchedAt) / 60000);
+    console.log(`[Mestre] Usando cache de dados base ${competitionCode} (${ageMin} min atrás)`);
+    return { finishedMatches: cached.finishedMatches };
   }
 
-  const headers = getFootballHeaders();
-  console.log('[Mestre] Buscando dados base do Brasileirão (cache expirado)...');
+  console.log(`[Mestre] Buscando dados base de ${competitionCode} (cache expirado)...`);
 
-  const standingsRes = await axios.get(
-    `${FOOTBALL_BASE}/competitions/BSA/standings`,
-    { headers, timeout: 15000 }
+  const finishedMatches = await footballApiGet(
+    `${FOOTBALL_BASE}/competitions/${competitionCode}/matches`,
+    { status: 'FINISHED', limit: 100 },
+    `base_finished_${competitionCode}`,
+    BASE_CACHE_TTL_MS
   );
 
-  // Aguarda 8s entre requisições para respeitar rate limit
-  await sleep(8000);
+  const matches = finishedMatches.matches || [];
+  baseDataCacheMap.set(competitionCode, { finishedMatches: matches, fetchedAt: now });
+  console.log(`[Mestre] Cache ${competitionCode} atualizado: ${matches.length} jogos finalizados`);
 
-  const finishedRes = await axios.get(
-    `${FOOTBALL_BASE}/competitions/BSA/matches?status=FINISHED&limit=100`,
-    { headers, timeout: 15000 }
-  );
-
-  const standings: any[] = standingsRes.data.standings[0]?.table || [];
-  const finishedMatches: any[] = finishedRes.data.matches || [];
-
-  // Atualiza cache
-  baseDataCache = { standings, finishedMatches, fetchedAt: now };
-  console.log(`[Mestre] Cache atualizado: ${standings.length} times, ${finishedMatches.length} jogos finalizados`);
-
-  return { standings, finishedMatches };
+  return { finishedMatches: matches };
 }
 
-// ─── Buscar próximo jogo sem palpite ─────────────────────────────────────────
+// ─── Buscar próximo jogo sem palpite (MULTI-LIGA) ───────────────────────────
 
 async function fetchNextMatchWithoutPrediction(): Promise<any | null> {
-  const headers = getFootballHeaders();
-
-  const res = await axios.get(
-    `${FOOTBALL_BASE}/competitions/BSA/matches?status=SCHEDULED`,
-    { headers, timeout: 15000 }
-  );
-
-  const scheduledMatches: any[] = res.data.matches || [];
+  console.log('[Mestre] Buscando jogos agendados de TODAS as ligas...');
+  
+  const scheduledMatches = await getAllScheduledMatches();
 
   if (scheduledMatches.length === 0) {
-    console.log('[Mestre] Nenhum jogo agendado encontrado.');
+    console.log('[Mestre] Nenhum jogo agendado encontrado em nenhuma liga.');
     return null;
   }
 
-  // Limita geração às 2 próximas rodadas apenas
-  // Encontra o menor matchday disponível (rodada atual/em andamento)
-  const matchdays = scheduledMatches
-    .map((m: any) => m.matchday)
-    .filter((d: any) => d != null)
-    .sort((a: number, b: number) => a - b);
-  const minMatchday = matchdays[0] ?? 0;
-  const maxAllowedMatchday = minMatchday + 1; // rodada atual + próxima
-
-  const allowedMatches = scheduledMatches.filter(
-    (m: any) => m.matchday == null || m.matchday <= maxAllowedMatchday
+  // Ordena por data (mais próximo primeiro)
+  const sortedMatches = scheduledMatches.sort(
+    (a: any, b: any) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime()
   );
 
-  console.log(`[Mestre] Gerando palpites apenas para rodadas ${minMatchday} e ${maxAllowedMatchday} (${allowedMatches.length} jogos permitidos)`);
+  // Filtra apenas jogos nas próximas 48h
+  const now = Date.now();
+  const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+  const allowedMatches = sortedMatches.filter(
+    (m: any) => new Date(m.utcDate).getTime() - now <= FORTY_EIGHT_HOURS
+  );
+
+  console.log(`[Mestre] ${allowedMatches.length} jogos nas próximas 48h (de ${scheduledMatches.length} total)`);
 
   for (const match of allowedMatches) {
+    // ─── Cache inteligente: verifica se já existe palpite válido ───
     const existing = await db
       .select({ id: predictionsSimple.id, createdAt: predictionsSimple.createdAt })
       .from(predictionsSimple)
       .where(eq(predictionsSimple.matchId, String(match.id)));
 
     if (existing.length === 0) {
-      console.log(`[Mestre] Próximo jogo sem palpite: ${match.homeTeam.name} vs ${match.awayTeam.name}`);
+      const compName = match.competitionName || getCompetitionName(match.competitionCode || '');
+      console.log(`[Mestre] Próximo jogo sem palpite: ${match.homeTeam.name} vs ${match.awayTeam.name} (${compName})`);
       return match;
     }
 
-    // Palpite com menos de 20h → pula
+    // Palpite com menos de 20h → pula (cache inteligente)
     const createdAt = new Date(existing[0].createdAt);
     const hoursSince = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
     if (hoursSince < 20) {
-      console.log(`[Mestre] ⏭️  Palpite recente (${hoursSince.toFixed(1)}h): ${match.homeTeam.name} vs ${match.awayTeam.name}`);
-      continue;
+      continue; // Palpite recente, usa o cache
     }
 
-    console.log(`[Mestre] Palpite desatualizado (${hoursSince.toFixed(1)}h): ${match.homeTeam.name} vs ${match.awayTeam.name}`);
+    const compName = match.competitionName || getCompetitionName(match.competitionCode || '');
+    console.log(`[Mestre] Palpite desatualizado (${hoursSince.toFixed(1)}h): ${match.homeTeam.name} vs ${match.awayTeam.name} (${compName})`);
     return match;
   }
 
@@ -174,31 +192,21 @@ async function fetchNextMatchWithoutPrediction(): Promise<any | null> {
   return null;
 }
 
-// ─── Montar prompt rico ───────────────────────────────────────────────────────
+// ─── Montar prompt rico (MULTI-LIGA) ─────────────────────────────────────────
 
-function buildRichPrompt(match: any, standings: any[], finishedMatches: any[]): string {
+function buildRichPrompt(match: any, finishedMatches: any[]): string {
   const homeId = match.homeTeam.id;
   const awayId = match.awayTeam.id;
   const home = match.homeTeam.name;
   const away = match.awayTeam.name;
-
-  const homeStanding = standings.find((s: any) => s.team.id === homeId);
-  const awayStanding = standings.find((s: any) => s.team.id === awayId);
-
-  const homePos = homeStanding ? `${homeStanding.position}º lugar, ${homeStanding.points} pts` : 'N/D';
-  const awayPos = awayStanding ? `${awayStanding.position}º lugar, ${awayStanding.points} pts` : 'N/D';
-
-  const homeRecord = homeStanding
-    ? `${homeStanding.won}V/${homeStanding.draw}E/${homeStanding.lost}D — ${homeStanding.goalsFor} gols marcados, ${homeStanding.goalsAgainst} sofridos (saldo ${homeStanding.goalDifference >= 0 ? '+' : ''}${homeStanding.goalDifference})`
-    : 'N/D';
-  const awayRecord = awayStanding
-    ? `${awayStanding.won}V/${awayStanding.draw}E/${awayStanding.lost}D — ${awayStanding.goalsFor} gols marcados, ${awayStanding.goalsAgainst} sofridos (saldo ${awayStanding.goalDifference >= 0 ? '+' : ''}${awayStanding.goalDifference})`
-    : 'N/D';
+  const competitionName = match.competitionName || match.competition?.name || 'Liga Internacional';
 
   const homeForm = buildFormString(finishedMatches, homeId);
   const awayForm = buildFormString(finishedMatches, awayId);
-  const homeAvg = calcGoalAverages(finishedMatches, homeId);
-  const awayAvg = calcGoalAverages(finishedMatches, awayId);
+  const homeLast5 = buildLast5Details(finishedMatches, homeId);
+  const awayLast5 = buildLast5Details(finishedMatches, awayId);
+  const homeAvg = calcGoalAverages(finishedMatches, homeId, 10);
+  const awayAvg = calcGoalAverages(finishedMatches, awayId, 10);
 
   // H2H
   const h2hMatches = finishedMatches
@@ -226,7 +234,7 @@ function buildRichPrompt(match: any, standings: any[], finishedMatches: any[]): 
     h2hSummary = `${h2hMatches.length} jogos: ${home} ${homeWins}V / ${draws}E / ${awayWins}V ${away} (placares: ${details.join(', ')})`;
   }
 
-  const expectedGoals = +(homeAvg.scored + awayAvg.scored).toFixed(1);
+  const expectedGoals = +(homeAvg.scored + awayAvg.scored).toFixed(2);
   const btsPct = Math.round((homeAvg.btts + awayAvg.btts) / 2);
 
   const matchDateStr = new Date(match.utcDate).toLocaleString('pt-BR', {
@@ -236,35 +244,74 @@ function buildRichPrompt(match: any, standings: any[], finishedMatches: any[]): 
   });
 
   return `=== JOGO: ${home} x ${away} ===
-📅 ${matchDateStr} | Rodada ${match.matchday || 'N/D'} — Brasileirão Série A
+🏆 ${competitionName}
+📅 ${matchDateStr} | ${match.matchday ? `Rodada ${match.matchday}` : 'Fase de grupos/eliminatórias'}
 
-━━━ CLASSIFICAÇÃO ━━━
-🏠 ${home}: ${homePos} | ${homeRecord}
-✈️  ${away}: ${awayPos} | ${awayRecord}
+━━━ ÚLTIMOS 5 JOGOS (detalhado) ━━━
+🏠 ${home} (forma: ${homeForm}):
+${homeLast5}
 
-━━━ FORMA RECENTE (últimos 5 jogos, mais recente primeiro) ━━━
-🏠 ${home}: ${homeForm}
-✈️  ${away}: ${awayForm}
+✈️  ${away} (forma: ${awayForm}):
+${awayLast5}
 
-━━━ MÉDIAS DE GOLS (últimos 5 jogos) ━━━
-🏠 ${home}: ${homeAvg.scored} marcados/jogo, ${homeAvg.conceded} sofridos/jogo, ${homeAvg.btts}% com ambas marcando
-✈️  ${away}: ${awayAvg.scored} marcados/jogo, ${awayAvg.conceded} sofridos/jogo, ${awayAvg.btts}% com ambas marcando
+━━━ MÉDIAS DE GOLS (últimos 10 jogos) ━━━
+🏠 ${home}: ${homeAvg.scored} marcados/jogo, ${homeAvg.conceded} sofridos/jogo, ${homeAvg.btts}% com ambas marcando (${homeAvg.games} jogos analisados)
+✈️  ${away}: ${awayAvg.scored} marcados/jogo, ${awayAvg.conceded} sofridos/jogo, ${awayAvg.btts}% com ambas marcando (${awayAvg.games} jogos analisados)
 
 ━━━ CONFRONTO DIRETO (H2H) ━━━
 ${h2hSummary}
 
-━━━ CONTEXTO ━━━
-• Gols esperados no jogo: ~${expectedGoals}
+━━━ CONTEXTO ESTATÍSTICO ━━━
+• Gols esperados no jogo (soma das médias): ~${expectedGoals}
 • Probabilidade estimada de ambas marcarem: ${btsPct}%
 • ${home} joga em casa (fator mandante)
+• Campeonato: ${competitionName}
 
 Analise com base nesses dados reais e forneça palpites específicos e fundamentados para este jogo.`;
 }
 
+// ─── NOVO Super Prompt de Elite v2.0 ─────────────────────────────────────────
+
+const SYSTEM_PROMPT_V2 = `Você é o "Mestre da Rodada v2.0", um Quant-Analyst de Elite especializado em modelos preditivos de futebol internacional. Sua missão é fornecer palpites com precisão cirúrgica, utilizando lógica estatística avançada.
+
+### PROCESSO DE PENSAMENTO OBRIGATÓRIO (Chain-of-Thought):
+Antes de gerar o JSON final, você deve realizar mentalmente (ou no campo de justificativa interna) a seguinte análise:
+1. **Cálculo de Força Relativa:** Compare a média de gols marcados/sofridos (Attack/Defense Strength) de cada time nos últimos 10 jogos, ajustando pelo peso do mando de campo.
+2. **Aplicação de Poisson:** Utilize a Distribuição de Poisson para estimar a probabilidade de cada equipe marcar 0, 1, 2, 3 ou 4+ gols. O placar exato deve ser a combinação de maior probabilidade estatística.
+3. **Análise de xG (Gols Esperados):** Considere se os times estão sendo eficientes ou se estão "devendo" gols com base no volume de jogo.
+4. **Contexto Tático:** Avalie se é um jogo de "under" (defesas sólidas, jogo truncado) ou "over" (ataques explosivos, defesas expostas).
+
+### REGRAS DE MERCADO (Obrigatórias para todos os jogos):
+1. **Quem vence (mainPrediction):** HOME | DRAW | AWAY.
+2. **Dupla Chance (doubleChance):** 1X | X2 | 12.
+3. **Gols (goalsPrediction):** Escolha a linha de maior valor (OVER/UNDER 0.5 a 3.5). Formato: OVER_X_5 ou UNDER_X_5 (ex: OVER_2_5, UNDER_1_5).
+4. **Ambas Marcam (bothTeamsToScore):** YES | NO (Crucial: deve ser coerente com o likelyScore).
+5. **Escanteios (cornersPrediction):** Baseie-se na média de cruzamentos e volume ofensivo. Formato: OVER_X_5 ou UNDER_X_5 (ex: OVER_8_5).
+6. **Cartões (cardsPrediction):** Considere a agressividade das equipes e o peso do confronto (clássicos = mais cartões). Formato: OVER_X_5 ou UNDER_X_5 (ex: OVER_3_5).
+7. **1º Tempo (halfTimePrediction):** HOME | DRAW | AWAY.
+8. **Melhor Aposta (bestBet):** O mercado de maior confiança (ex: "Handicap +1.5 Time A" ou "Ambas Marcam").
+
+### FORMATAÇÃO DO PLACAR EXATO (likelyScore):
+- O placar deve ser o resultado direto da sua análise de Poisson. 
+- **Auto-Correção:** Se você prever "Ambas Marcam: NO", o placar NÃO pode ser 1x1, 2x1, etc. Se prever "Over 2.5", a soma dos gols no placar deve ser >= 3.
+
+### SAÍDA JSON (Apenas JSON puro, sem markdown, sem texto adicional):
+{
+  "mainPrediction": "string",
+  "doubleChance": "string",
+  "goalsPrediction": "string",
+  "bothTeamsToScore": "string",
+  "cornersPrediction": "string",
+  "cardsPrediction": "string",
+  "halfTimePrediction": "string",
+  "likelyScore": "X x Y",
+  "bestBet": "Descrição curta e direta da melhor aposta",
+  "justification": "Máximo 2 frases técnicas focadas em estatística (ex: Poisson indica 65% de chance de Under 2.5)."
+}`;
+
 // ─── Gerar palpite via Groq ───────────────────────────────────────────────────
 
 async function generatePredictionWithAI(prompt: string): Promise<any> {
-  // Rotação automática de chaves: se uma der 429, tenta a próxima
   const groqKeys = [
     process.env.GROQ_API_KEY,
     process.env.GROQ_API_KEY_2,
@@ -273,39 +320,6 @@ async function generatePredictionWithAI(prompt: string): Promise<any> {
 
   if (groqKeys.length === 0) throw new Error('Nenhuma GROQ_API_KEY configurada');
 
-  const systemPrompt = `Você é o Mestre da Rodada, o mais respeitado analista de futebol brasileiro. Você analisa dados reais e fornece palpites ESPECÍFICOS e DIFERENCIADOS para cada jogo — nunca genéricos ou repetitivos.
-
-REGRAS OBRIGATÓRIAS:
-1. Use os dados fornecidos. Cada jogo é único — palpites diferentes para jogos diferentes.
-2. Para cada mercado, escolha a LINHA MAIS ADEQUADA com base nos dados reais do jogo.
-3. Mencione dados específicos na justificativa (forma recente, médias, H2H, posição na tabela).
-4. O campo "bestBet" deve descrever o palpite mais seguro em português claro e direto.
-5. Retorne APENAS JSON válido, sem texto adicional, sem markdown, sem explicações fora do JSON.
-
-JSON obrigatório (todos os campos):
-{
-  "mainPrediction": "HOME" | "DRAW" | "AWAY",
-
-  "doubleChance": "1X" | "X2" | "12",
-
-  "goalsPrediction": escolha a linha mais adequada entre: "OVER_0_5" | "OVER_1_5" | "OVER_2_5" | "OVER_3_5" | "UNDER_0_5" | "UNDER_1_5" | "UNDER_2_5" | "UNDER_3_5",
-
-  "bothTeamsToScore": "YES" | "NO",
-
-  "cornersPrediction": escolha a linha mais adequada entre: "OVER_6_5" | "OVER_7_5" | "OVER_8_5" | "OVER_9_5" | "UNDER_6_5" | "UNDER_7_5" | "UNDER_8_5" | "UNDER_9_5",
-
-  "cardsPrediction": escolha a linha mais adequada entre: "OVER_2_5" | "OVER_3_5" | "OVER_4_5" | "OVER_5_5" | "UNDER_2_5" | "UNDER_3_5" | "UNDER_4_5" | "UNDER_5_5",
-
-  "halfTimePrediction": "HOME" | "DRAW" | "AWAY",
-
-  "likelyScore": "placar mais provável, ex: 1x0 ou 2x1",
-
-  "bestBet": "palpite mais seguro do jogo em português direto, ex: Vitória do Flamengo + Mais de 1.5 gols",
-
-  "justification": "análise detalhada em português com mínimo 4 frases, citando dados específicos do jogo (forma recente, médias de gols, H2H, posição na tabela)"
-}`;
-
-  // Tenta cada chave em ordem — se uma der 429, passa para a próxima
   let lastError: any;
 
   for (let i = 0; i < groqKeys.length; i++) {
@@ -319,11 +333,11 @@ JSON obrigatório (todos os campos):
         {
           model: MODEL,
           messages: [
-            { role: 'system', content: systemPrompt },
+            { role: 'system', content: SYSTEM_PROMPT_V2 },
             { role: 'user', content: prompt },
           ],
           temperature: 0.35,
-          max_tokens: 1500,
+          max_tokens: 1200,
         },
         {
           headers: {
@@ -345,10 +359,9 @@ JSON obrigatório (todos os campos):
       const status = err?.response?.status;
       if (status === 429) {
         console.log(`[Groq] ⚠️ Rate limit (429) na ${keyLabel} — tentando próxima chave...`);
-        // Pequeno delay antes de tentar a próxima chave
         if (i < groqKeys.length - 1) await sleep(3000);
       } else {
-        throw err; // Outros erros: falha imediata
+        throw err;
       }
     }
   }
@@ -369,8 +382,8 @@ async function sendToTelegram(match: any, ai: any): Promise<void> {
 
   const home = match.homeTeam.name;
   const away = match.awayTeam.name;
+  const competitionName = match.competitionName || match.competition?.name || 'Liga Internacional';
 
-  // Helpers para formatar os campos da IA
   const formatLine = (val: string | undefined, overPrefix = 'Mais de ', underPrefix = 'Menos de ') => {
     if (!val) return 'N/D';
     return val
@@ -399,10 +412,10 @@ async function sendToTelegram(match: any, ai: any): Promise<void> {
     hour: '2-digit', minute: '2-digit'
   });
 
-  const message = `🏆 *MESTRE DA RODADA — PALPITE*
+  const message = `🏆 *MESTRE DA RODADA v2.0 — PALPITE*
 
 ⚽ *${home} x ${away}*
-📅 ${matchDateStr} | Brasileirão Série A
+📅 ${matchDateStr} | ${competitionName}
 
 ━━━━━━━━━━━━━━━━━━━━
 🎯 *RESULTADO*
@@ -421,10 +434,6 @@ ${btsLabel}
 ⭐ *MELHOR APOSTA DO JOGO*
 ${ai.bestBet || 'N/D'}
 🎯 Placar mais provável: *${ai.likelyScore || 'N/D'}*
-
-━━━━━━━━━━━━━━━━━━━━
-🧠 *ANÁLISE DO MESTRE*
-${ai.justification || 'N/D'}
 
 ━━━━━━━━━━━━━━━━━━━━`;
 
@@ -455,7 +464,7 @@ ${ai.justification || 'N/D'}
       },
       { timeout: 10000 }
     );
-    console.log(`[Telegram] ✅ Palpite enviado: ${home} vs ${away}`);
+    console.log(`[Telegram] ✅ Palpite enviado: ${home} vs ${away} (${competitionName})`);
   } catch (err: any) {
     console.error(`[Telegram] ❌ Erro ao enviar: ${err.message}`);
   }
@@ -464,6 +473,8 @@ ${ai.justification || 'N/D'}
 // ─── Salvar palpite no banco ──────────────────────────────────────────────────
 
 async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'> {
+  const competitionName = match.competitionName || match.competition?.name || '';
+  
   const data: Record<string, any> = {
     matchId: String(match.id),
     homeTeamName: match.homeTeam.name,
@@ -471,7 +482,6 @@ async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'>
     homeTeamCrest: match.homeTeam.crest || null,
     awayTeamCrest: match.awayTeam.crest || null,
     matchDate: new Date(match.utcDate),
-    // Campos obrigatórios — usa valor padrão se a IA não retornar
     mainPrediction: ai.mainPrediction || 'DRAW',
     mainConfidence: ai.mainConfidence || 'MEDIUM',
     goalsPrediction: ai.goalsPrediction || 'OVER_2_5',
@@ -488,7 +498,7 @@ async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'>
     isPublished: true,
   };
 
-  // Salva campos extras via SQL direto (evita erro de coluna não mapeada no schema Drizzle)
+  // Campos extras via SQL direto
   const extraFields: Record<string, any> = {
     home_probability: ai.homeProbability ?? null,
     draw_probability: ai.drawProbability ?? null,
@@ -505,6 +515,8 @@ async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'>
     best_bet: ai.bestBet ?? null,
     best_bet_confidence: ai.bestBetConfidence ?? null,
     matchday: match.matchday ?? null,
+    competition_code: match.competitionCode ?? null,
+    competition_name: competitionName || null,
   };
 
   const existing = await db
@@ -514,7 +526,6 @@ async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'>
 
   if (existing.length === 0) {
     await db.insert(predictionsSimple).values(data as any);
-    // Atualiza campos extras via SQL raw
     const setClauses = Object.entries(extraFields)
       .filter(([, v]) => v !== null && v !== undefined)
       .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
@@ -522,11 +533,10 @@ async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'>
     if (setClauses) {
       await db.execute(sql.raw(`UPDATE predictions_simple SET ${setClauses} WHERE match_id = '${data.matchId}'`));
     }
-    console.log(`✅ [Mestre] Palpite CRIADO: ${data.homeTeamName} vs ${data.awayTeamName}`);
+    console.log(`✅ [Mestre] Palpite CRIADO: ${data.homeTeamName} vs ${data.awayTeamName} (${competitionName})`);
     return 'saved';
   } else {
     await db.update(predictionsSimple).set(data as any).where(eq(predictionsSimple.matchId, data.matchId));
-    // Atualiza campos extras via SQL raw
     const setClauses = Object.entries(extraFields)
       .filter(([, v]) => v !== null && v !== undefined)
       .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
@@ -534,49 +544,55 @@ async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'>
     if (setClauses) {
       await db.execute(sql.raw(`UPDATE predictions_simple SET ${setClauses} WHERE match_id = '${data.matchId}'`));
     }
-    console.log(`🔄 [Mestre] Palpite ATUALIZADO: ${data.homeTeamName} vs ${data.awayTeamName}`);
+    console.log(`🔄 [Mestre] Palpite ATUALIZADO: ${data.homeTeamName} vs ${data.awayTeamName} (${competitionName})`);
     return 'updated';
   }
 }
 
-// ─── Gerar palpite de UM jogo por vez ─────────────────────────────────────────
+// ─── Gerar palpite de UM jogo por vez (MULTI-LIGA) ───────────────────────────
 
 export async function generateNextPrediction(): Promise<{ status: 'generated' | 'skipped' | 'error'; match?: string; error?: string }> {
-  console.log('\n[Mestre] ⏰ Job iniciado — verificando próximo jogo sem palpite...');
+  console.log('\n[Mestre v2.0] ⏰ Job iniciado — verificando próximo jogo sem palpite (TODAS as ligas)...');
 
   try {
-    // 1. Busca próximo jogo sem palpite (1 requisição)
+    // 1. Busca próximo jogo sem palpite (multi-liga)
     const match = await fetchNextMatchWithoutPrediction();
 
     if (!match) {
-      console.log('[Mestre] ✅ Todos os jogos já têm palpites. Nada a fazer.');
+      console.log('[Mestre v2.0] ✅ Todos os jogos já têm palpites. Nada a fazer.');
       return { status: 'skipped' };
     }
 
-    // 2. Busca dados base (com cache — evita 429)
-    const { standings, finishedMatches } = await getBaseData();
+    const competitionCode = match.competitionCode || match.competition?.code || 'BSA';
+    const competitionName = match.competitionName || getCompetitionName(competitionCode);
+
+    // 2. Busca dados base da competição (com cache)
+    const { finishedMatches } = await getBaseDataForCompetition(competitionCode);
+
+    // Pequeno delay para respeitar rate limit
+    await sleep(2000);
 
     // 3. Monta prompt rico
-    const prompt = buildRichPrompt(match, standings, finishedMatches);
+    const prompt = buildRichPrompt(match, finishedMatches);
 
     // 4. Gera palpite com IA
-    console.log(`[Mestre] 🤖 Gerando palpite para: ${match.homeTeam.name} vs ${match.awayTeam.name}`);
+    console.log(`[Mestre v2.0] 🤖 Gerando palpite para: ${match.homeTeam.name} vs ${match.awayTeam.name} (${competitionName})`);
     const aiPrediction = await generatePredictionWithAI(prompt);
 
     // 5. Salva no banco
     const saveStatus = await savePrediction(match, aiPrediction);
 
-    // 6. Envia ao Telegram apenas se for palpite novo (não atualização)
+    // 6. Envia ao Telegram apenas se for palpite novo
     if (saveStatus === 'saved') {
       await sendToTelegram(match, aiPrediction);
     }
 
-    const matchName = `${match.homeTeam.name} vs ${match.awayTeam.name}`;
+    const matchName = `${match.homeTeam.name} vs ${match.awayTeam.name} (${competitionName})`;
     return { status: 'generated', match: matchName };
 
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error(`[Mestre] ❌ Erro ao gerar palpite: ${msg}`);
+    console.error(`[Mestre v2.0] ❌ Erro ao gerar palpite: ${msg}`);
     return { status: 'error', error: msg };
   }
 }
@@ -589,14 +605,20 @@ export async function generateAllPredictions(): Promise<{ generated: number; err
 
   let generated = 0, errors = 0, skipped = 0;
 
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 12; i++) {
     const result = await generateNextPrediction();
-    if (result.status === 'generated') generated++;
-    else if (result.status === 'skipped') { skipped++; break; }
-    else errors++;
+    if (result.status === 'generated') {
+      generated++;
+    } else if (result.status === 'skipped') {
+      skipped++;
+      break;
+    } else {
+      errors++;
+    }
 
-    if (i < 7 && result.status !== 'skipped') {
-      await sleep(5 * 60 * 1000); // 5 minutos entre cada jogo
+    // Delay entre gerações (só se não foi o último)
+    if (i < 11) {
+      await sleep(3 * 60 * 1000); // 3 minutos entre cada jogo (otimizado)
     }
   }
 

@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
       .orderBy(desc(predictionsSimple.matchDate));
 
     // Adiciona o slug em cada palpite
-    const withSlug = allPredictions.map((p) => ({
+    const withSlug = allPredictions.map((p: any) => ({
       ...p,
       slug: generateSlug(p.homeTeamName, p.awayTeamName, p.matchDate),
     }));
@@ -54,7 +54,7 @@ router.get('/by-slug/:slug', async (req, res) => {
       .where(eq(predictionsSimple.isPublished, true));
 
     const match = allPredictions.find(
-      (p) => generateSlug(p.homeTeamName, p.awayTeamName, p.matchDate) === slug
+      (p: any) => generateSlug(p.homeTeamName, p.awayTeamName, p.matchDate) === slug
     );
 
     if (!match) {
@@ -82,7 +82,7 @@ router.get('/sitemap', async (req, res) => {
       .where(eq(predictionsSimple.isPublished, true))
       .orderBy(desc(predictionsSimple.matchDate));
 
-    const slugs = allPredictions.map((p) => ({
+    const slugs = allPredictions.map((p: any) => ({
       slug: generateSlug(p.homeTeamName, p.awayTeamName, p.matchDate),
       lastmod: new Date(p.createdAt).toISOString().split('T')[0],
     }));
@@ -111,7 +111,7 @@ router.get('/sitemap-predictions.xml', async (req, res) => {
     const baseUrl = 'https://www.mestredarodada.com.br';
 
     const urls = allPredictions
-      .map((p) => {
+      .map((p: any) => {
         const slug = generateSlug(p.homeTeamName, p.awayTeamName, p.matchDate);
         const lastmod = new Date(p.createdAt).toISOString().split('T')[0];
         return `  <url>\n    <loc>${baseUrl}/palpite/${slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`;
@@ -131,18 +131,18 @@ ${urls}
   }
 });
 
-// ─── DELETE /api/predictions/cleanup — Limpar palpites com mais de 7 dias ────
+// ─── DELETE /api/predictions/cleanup — Limpar palpites com mais de 2 dias ────
 router.delete('/cleanup', async (req, res) => {
   try {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
     const deleted = await db
       .delete(predictionsSimple)
-      .where(lt(predictionsSimple.createdAt, sevenDaysAgo));
+      .where(lt(predictionsSimple.createdAt, twoDaysAgo));
 
-    console.log(`[CLEANUP] Palpites com mais de 7 dias removidos.`);
-    res.json({ success: true, message: 'Palpites antigos removidos com sucesso' });
+    console.log(`[CLEANUP v2.0] Palpites com mais de 2 dias removidos.`);
+    res.json({ success: true, message: 'Palpites antigos removidos com sucesso (> 2 dias)' });
   } catch (error) {
     console.error('Erro ao limpar palpites:', error);
     res.status(500).json({ error: 'Erro ao limpar palpites' });

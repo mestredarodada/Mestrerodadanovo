@@ -1,7 +1,15 @@
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import { getStandings, getMatches, getLiveMatches, getAllMatches, getFinishedMatches } from "./footballApi";
+import { 
+  getStandings, 
+  getAllLiveMatches, 
+  getAllMatches, 
+  getAllFinishedMatches,
+  getMatchesByCompetition,
+  getCompetitionName,
+  SUPPORTED_COMPETITIONS,
+} from "./footballApi";
 
 export const appRouter = router({
   system: systemRouter,
@@ -20,7 +28,22 @@ export const appRouter = router({
       .input(z.object({ status: z.enum(['SCHEDULED', 'FINISHED', 'IN_PLAY']).default('SCHEDULED') }))
       .query(async ({ input }) => {
         try {
-          return await getMatches(input.status);
+          // Agora busca de todas as ligas
+          const today = new Date();
+          const pastDate = new Date();
+          pastDate.setDate(today.getDate() - 2);
+          const futureDate = new Date();
+          futureDate.setDate(today.getDate() + 7);
+          
+          const { getAllMatchesByDate } = await import("./footballApi");
+          const dateFrom = pastDate.toISOString().split('T')[0];
+          const dateTo = futureDate.toISOString().split('T')[0];
+          
+          const allMatches = await getAllMatchesByDate(dateFrom, dateTo);
+          return allMatches.filter((m: any) => {
+            if (input.status === 'IN_PLAY') return ['IN_PLAY', 'PAUSED'].includes(m.status);
+            return m.status === input.status;
+          });
         } catch (error) {
           console.error(`Erro ao carregar jogos (${input.status}):`, error);
           throw new Error(`Falha ao carregar jogos`);
@@ -29,7 +52,7 @@ export const appRouter = router({
 
     live: publicProcedure.query(async () => {
       try {
-        return await getLiveMatches();
+        return await getAllLiveMatches();
       } catch (error) {
         console.error('Erro ao carregar jogos ao vivo:', error);
         return [];
@@ -42,8 +65,8 @@ export const appRouter = router({
         const { sql } = await import('drizzle-orm');
         const database = getDb();
 
-        // Busca jogos finalizados da API (com cache + fallback)
-        const finishedMatches: any[] = await getFinishedMatches(50);
+        // Busca jogos finalizados de TODAS as ligas (últimos 3 dias)
+        const finishedMatches: any[] = await getAllFinishedMatches(3);
 
         // Busca palpites do banco
         const result = await database.execute(sql`
@@ -87,14 +110,15 @@ export const appRouter = router({
               return (pred.both_teams_to_score === 'YES') === actualBtts;
             })();
 
-            // Dupla chance (ex: HOME_DRAW, HOME_AWAY, DRAW_AWAY)
             const doubleChanceHit = (() => {
               const dc = pred.double_chance;
               if (!dc) return null;
+              if (dc === '1X') return actualResult === 'HOME' || actualResult === 'DRAW';
+              if (dc === 'X2') return actualResult === 'DRAW' || actualResult === 'AWAY';
+              if (dc === '12') return actualResult === 'HOME' || actualResult === 'AWAY';
               if (dc === 'HOME_DRAW') return actualResult === 'HOME' || actualResult === 'DRAW';
               if (dc === 'HOME_AWAY') return actualResult === 'HOME' || actualResult === 'AWAY';
               if (dc === 'DRAW_AWAY') return actualResult === 'DRAW' || actualResult === 'AWAY';
-              // Tenta parsear formatos como "Flamengo ou Empate"
               const dcLower = dc.toLowerCase();
               if (dcLower.includes('empate')) {
                 if (actualResult === 'DRAW') return true;
@@ -104,7 +128,6 @@ export const appRouter = router({
               return null;
             })();
 
-            // 1º Tempo (score do halfTime)
             const halfTimeHit = (() => {
               if (!pred.half_time_prediction) return null;
               const htHome = match.score?.halfTime?.home;
@@ -115,7 +138,6 @@ export const appRouter = router({
               if (htPred === 'HOME' || htPred === 'AWAY' || htPred === 'DRAW') {
                 return htPred === htResult;
               }
-              // Formato texto: "Empate no 1ºT"
               const htLower = htPred.toLowerCase();
               if (htLower.includes('empate') && htResult === 'DRAW') return true;
               if (htResult === 'HOME' && htLower.includes(pred.home_team_name?.toLowerCase()?.split(' ')[0])) return true;
@@ -124,7 +146,6 @@ export const appRouter = router({
               return null;
             })();
 
-            // Placar exato
             const scoreHit = (() => {
               if (!pred.likely_score) return null;
               const parts = pred.likely_score.match(/(\d+)\s*[x×-]\s*(\d+)/);
@@ -144,13 +165,13 @@ export const appRouter = router({
               awayTeamCrest: pred.away_team_crest,
               matchDate: pred.match_date,
               matchday: match.matchday,
-              // Resultado real
+              competitionCode: pred.competition_code || match.competition?.code || null,
+              competitionName: pred.competition_name || match.competition?.name || null,
               actualHomeGoals: homeGoals,
               actualAwayGoals: awayGoals,
               actualResult,
               actualHalfTimeHome: match.score?.halfTime?.home ?? null,
               actualHalfTimeAway: match.score?.halfTime?.away ?? null,
-              // Palpites da IA
               mainPrediction: pred.main_prediction,
               goalsPrediction: pred.goals_prediction,
               bothTeamsToScore: pred.both_teams_to_score,
@@ -160,7 +181,6 @@ export const appRouter = router({
               halfTimePrediction: pred.half_time_prediction,
               bestBet: pred.best_bet,
               likelyScore: pred.likely_score,
-              // Acertos
               resultHit,
               goalsHit,
               bttsHit,
@@ -188,18 +208,16 @@ export const appRouter = router({
 
         const database = getDb();
 
-        // Busca TODOS os jogos da API (com cache + fallback de múltiplas chaves)
+        // Busca TODOS os jogos de TODAS as ligas
         let allMatches: any[] = [];
         let oldFinishedIds: Set<string> = new Set();
         try {
           allMatches = await getAllMatches();
           
-          // Filtra jogos finalizados há mais de 5h (esses devem sumir dos palpites)
           const now = Date.now();
           const FIVE_HOURS = 5 * 60 * 60 * 1000;
           for (const m of allMatches) {
             if (m.status === 'FINISHED') {
-              // Estima o término: hora do jogo + ~105min
               const finishTime = new Date(m.utcDate).getTime() + (105 * 60 * 1000);
               if (now - finishTime >= FIVE_HOURS) {
                 oldFinishedIds.add(String(m.id));
@@ -210,18 +228,16 @@ export const appRouter = router({
           const scheduled = allMatches.filter((m: any) => m.status === 'SCHEDULED').length;
           const inPlay = allMatches.filter((m: any) => ['IN_PLAY', 'PAUSED'].includes(m.status)).length;
           const finished = allMatches.filter((m: any) => m.status === 'FINISHED').length;
-          console.log(`[PREDICTIONS] ${scheduled} agendados, ${inPlay} ao vivo, ${finished} finalizados, ${oldFinishedIds.size} antigos (> 5h)`);
+          console.log(`[PREDICTIONS v2.0] ${scheduled} agendados, ${inPlay} ao vivo, ${finished} finalizados, ${oldFinishedIds.size} antigos (> 5h)`);
         } catch (apiErr) {
-          console.warn('[PREDICTIONS] Erro ao buscar API football-data, usando dados do banco:', apiErr);
+          console.warn('[PREDICTIONS v2.0] Erro ao buscar API football-data, usando dados do banco:', apiErr);
         }
 
-        // Mapa de match_id -> dados da API (para corrigir datas e matchday)
         const apiMatchMap = new Map<string, any>();
         for (const m of allMatches) {
           apiMatchMap.set(String(m.id), m);
         }
 
-        // Busca todos os palpites publicados
         const result = await database.execute(sql`
           SELECT *
           FROM predictions_simple
@@ -229,44 +245,39 @@ export const appRouter = router({
           ORDER BY match_date ASC
         `);
 
-        // Atualiza datas erradas no banco em background (não bloqueia a resposta)
-        const rowsToUpdate: { matchId: string; utcDate: string; matchday: number }[] = [];
+        // Atualiza datas erradas no banco em background
+        const rowsToUpdate: { matchId: string; utcDate: string; matchday: number | null }[] = [];
         for (const row of (result.rows || result as any[])) {
           const apiMatch = apiMatchMap.get(String(row.match_id));
           if (apiMatch) {
             const dbDate = new Date(row.match_date).getTime();
             const apiDate = new Date(apiMatch.utcDate).getTime();
-            // Se a data difere em mais de 1 minuto, atualiza
             if (Math.abs(dbDate - apiDate) > 60000) {
               rowsToUpdate.push({
                 matchId: String(row.match_id),
                 utcDate: apiMatch.utcDate,
-                matchday: apiMatch.matchday,
+                matchday: apiMatch.matchday ?? null,
               });
             }
           }
         }
 
-        // Atualiza datas em background
         if (rowsToUpdate.length > 0) {
-          console.log(`[PREDICTIONS] Corrigindo ${rowsToUpdate.length} datas no banco...`);
+          console.log(`[PREDICTIONS v2.0] Corrigindo ${rowsToUpdate.length} datas no banco...`);
           for (const upd of rowsToUpdate) {
             try {
               await database.execute(
-                sql.raw(`UPDATE predictions_simple SET match_date = '${upd.utcDate}', matchday = ${upd.matchday || 'NULL'} WHERE match_id = '${upd.matchId}'`)
+                sql.raw(`UPDATE predictions_simple SET match_date = '${upd.utcDate}'${upd.matchday !== null ? `, matchday = ${upd.matchday}` : ''} WHERE match_id = '${upd.matchId}'`)
               );
             } catch (e) {
-              console.warn(`[PREDICTIONS] Erro ao atualizar data do match ${upd.matchId}:`, e);
+              console.warn(`[PREDICTIONS v2.0] Erro ao atualizar data do match ${upd.matchId}:`, e);
             }
           }
         }
 
-        // Normaliza os campos e filtra jogos finalizados há mais de 5h
-        // Mantém: agendados, ao vivo, e finalizados recentes (< 5h)
         const predictions = (result.rows || result as any[])
           .filter((row: any) => !oldFinishedIds.has(String(row.match_id)))
           .map((row: any) => {
-            // Usa a data da API se disponível (mais confiável)
             const apiMatch = apiMatchMap.get(String(row.match_id));
             const matchDate = apiMatch ? apiMatch.utcDate : row.match_date;
             const matchday = apiMatch?.matchday ? Number(apiMatch.matchday) : (row.matchday ? Number(row.matchday) : null);
@@ -301,6 +312,8 @@ export const appRouter = router({
               halfTimePrediction: row.half_time_prediction,
               halfTimeConfidence: row.half_time_confidence,
               matchday,
+              competitionCode: row.competition_code || (apiMatch?.competitionCode) || null,
+              competitionName: row.competition_name || (apiMatch?.competitionName) || null,
               likelyScore: row.likely_score,
               bestBet: row.best_bet,
               bestBetConfidence: row.best_bet_confidence,
@@ -311,10 +324,9 @@ export const appRouter = router({
               createdAt: row.created_at,
             };
           })
-          // Ordena por data ASC (próximo jogo primeiro)
           .sort((a: any, b: any) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
 
-        console.log(`[PREDICTIONS] Retornando ${predictions.length} palpites (filtrados)`);
+        console.log(`[PREDICTIONS v2.0] Retornando ${predictions.length} palpites (filtrados)`);
         return predictions;
       } catch (error) {
         console.error('Erro ao carregar palpites:', error);

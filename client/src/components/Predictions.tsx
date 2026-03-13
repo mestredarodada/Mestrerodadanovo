@@ -292,7 +292,7 @@ function PredictionCard({ prediction }: { prediction: any }) {
             {dateStr}
           </span>
           <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            {prediction.matchday ? `Rodada ${prediction.matchday}` : 'Brasileirão'}
+            {prediction.competitionName || (prediction.matchday ? `Rodada ${prediction.matchday}` : 'Liga')}
           </span>
         </div>
 
@@ -507,40 +507,15 @@ export function Predictions() {
     refetchInterval: 5 * 60 * 1000,
   });
 
-  // Hooks DEVEM vir antes de qualquer return condicional (regra dos Hooks do React)
-  const grouped = useMemo(() => {
+  // Ordena palpites por data crescente (próximo jogo primeiro)
+  const sortedPredictions = useMemo(() => {
     if (!predictions || predictions.length === 0) return [];
-    const map = new Map<number | string, any[]>();
-    for (const p of predictions) {
-      const key = p.matchday ?? 0;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(p);
-    }
-    // Ordena cada rodada internamente pelo jogo mais próximo primeiro (data crescente)
-    for (const [, preds] of map) {
-      preds.sort((a: any, b: any) => {
-        const dateA = a.matchDate ? new Date(a.matchDate).getTime() : 0;
-        const dateB = b.matchDate ? new Date(b.matchDate).getTime() : 0;
-        return dateA - dateB;
-      });
-    }
-    // Ordena rodadas em ordem CRESCENTE: rodada menor (em andamento) primeiro
-    return Array.from(map.entries()).sort(([a], [b]) => Number(a) - Number(b));
+    return [...predictions].sort((a: any, b: any) => {
+      const dateA = a.matchDate ? new Date(a.matchDate).getTime() : 0;
+      const dateB = b.matchDate ? new Date(b.matchDate).getTime() : 0;
+      return dateA - dateB;
+    });
   }, [predictions]);
-
-  // Rodada mais baixa = rodada em andamento (menor número = mais próxima)
-  // grouped já está ordenado crescente, então o primeiro item é a rodada mais próxima
-  const firstRoundKey = grouped[0]?.[0] ?? 0;
-  const rounds = grouped.map(([r]) => Number(r)).filter(r => r > 0).sort((a, b) => a - b);
-  const minRound = rounds[0] ?? 0;
-  const [selectedRound, setSelectedRound] = useState<number | string>(firstRoundKey);
-
-  // Sincroniza a seleção quando os dados carregam (caso o estado inicial seja 0)
-  const effectiveRound = grouped.find(([r]) => r === selectedRound) ? selectedRound : firstRoundKey;
-
-  const currentPredictions = useMemo(() => {
-    return grouped.find(([r]) => r === effectiveRound)?.[1] ?? [];
-  }, [grouped, effectiveRound]);
 
   if (isLoading) {
     return (
@@ -590,7 +565,7 @@ export function Predictions() {
         <div className="text-center max-w-xs">
           <p className="font-bold text-lg text-foreground">Palpites em Breve</p>
           <p className="text-sm text-muted-foreground mt-2">
-            O Mestre está analisando os próximos jogos do Brasileirão com dados reais.
+            O Mestre está analisando os próximos jogos de todas as ligas com dados reais.
             Os palpites são gerados automaticamente antes de cada rodada.
           </p>
           <p className="text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1">
@@ -624,53 +599,17 @@ export function Predictions() {
         </button>
       </div>
 
-      {/* Submenu de rodadas */}
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {grouped.map(([round, preds]) => {
-          const roundNum = Number(round);
-          const isMin = roundNum === minRound && minRound > 0;
-          const label = roundNum === 0
-            ? 'Sem rodada'
-            : isMin
-              ? '🟢 Rodada em Andamento'
-              : `📅 Próximas Rodadas`;
-          const isSelected = effectiveRound === round;
-          return (
-            <button
-              key={round}
-              onClick={() => setSelectedRound(round)}
-              className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm border ${
-                isSelected
-                  ? isMin
-                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-emerald-500/30'
-                    : 'bg-primary text-primary-foreground border-primary shadow-primary/30'
-                  : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
-              }`}
-            >
-              {label}
-              <span className={`ml-2 text-xs font-normal ${
-                isSelected ? 'opacity-80' : 'opacity-50'
-              }`}>({preds.length})</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Info: jogos de todas as ligas */}
+      <p className="text-xs text-muted-foreground mb-2">
+        Palpites para jogos de todas as ligas cobertas pelo Mestre.
+      </p>
 
-      {/* Cards da rodada selecionada */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={String(effectiveRound)}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.2 }}
-          className="grid grid-cols-1 gap-4"
-        >
-          {currentPredictions.map((prediction: any) => (
-            <PredictionCard key={prediction.id} prediction={prediction} />
-          ))}
-        </motion.div>
-      </AnimatePresence>
+      {/* Cards de palpites */}
+      <div className="grid grid-cols-1 gap-4">
+        {sortedPredictions.map((prediction: any) => (
+          <PredictionCard key={prediction.id} prediction={prediction} />
+        ))}
+      </div>
     </div>
   );
 }
