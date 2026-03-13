@@ -75,7 +75,7 @@ function setCache<T>(key: string, data: T, ttlMs: number): void {
 export const CACHE_TTL = {
   MATCHES_SCHEDULED: 5 * 60 * 1000,   // 5 minutos - próximos jogos
   MATCHES_LIVE: 30 * 1000,            // 30 segundos - jogos ao vivo
-  MATCHES_FINISHED: 2 * 60 * 1000,    // 2 minutos - resultados (reduzido para pegar jogos recém-finalizados)
+  MATCHES_FINISHED: 5 * 60 * 1000,    // 5 minutos - resultados
   MATCHES_ALL: 2 * 60 * 1000,         // 2 minutos - todos os jogos
   MATCHES_BATCH: 10 * 60 * 1000,      // 10 minutos - batch de jogos do dia
   PREDICTIONS: 2 * 60 * 1000,         // 2 minutos - palpites
@@ -216,9 +216,11 @@ export async function getAllFinishedMatches(daysBack = 3) {
   const today = new Date();
   const pastDate = new Date();
   pastDate.setDate(today.getDate() - daysBack);
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
   
   const dateFrom = pastDate.toISOString().split('T')[0];
-  const dateTo = today.toISOString().split('T')[0];
+  const dateTo = tomorrow.toISOString().split('T')[0]; // dateTo é exclusive na API, precisa ser amanhã para incluir hoje
   
   const competitionCodes = COMPETITION_CODES.join(',');
   const data = await footballApiGet(
