@@ -3,7 +3,6 @@ import { useIsAppWebView, isAppWebView } from '@/hooks/useIsAppWebView';
 import { analytics } from '@/hooks/useAnalytics';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMemo, useState } from 'react';
-import { Link } from 'wouter';
 import {
   Sparkles,
   TrendingUp,
@@ -29,14 +28,7 @@ import { ptBR } from 'date-fns/locale';
 
 const AFFILIATE_LINK = 'https://1wrlst.com/?open=register&p=c2f3';
 
-// Gera slug amigável para a URL da página individual
-function generateSlug(homeTeam: string, awayTeam: string, matchDate: string | Date): string {
-  const normalize = (str: string) =>
-    str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const date = new Date(matchDate);
-  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  return `${normalize(homeTeam)}-x-${normalize(awayTeam)}-${dateStr}`;
-}
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -447,15 +439,6 @@ function PredictionCard({ prediction }: { prediction: any }) {
                 </div>
               )}
 
-              {/* Link para página individual do palpite */}
-              <div className="px-4 mb-2">
-                <Link href={`/palpite/${generateSlug(prediction.homeTeamName || '', prediction.awayTeamName || '', prediction.matchDate || new Date())}`}>
-                  <a className="flex items-center justify-center gap-2 w-full bg-muted/50 hover:bg-muted border border-border hover:border-purple-500/40 text-muted-foreground hover:text-purple-500 font-semibold text-xs rounded-xl py-2.5 px-4 transition-all duration-200">
-                    <ExternalLink size={13} />
-                    <span>Ver página completa do palpite</span>
-                  </a>
-                </Link>
-              </div>
 
               {/* Botões de compartilhamento */}
               <ShareButtons prediction={prediction} />

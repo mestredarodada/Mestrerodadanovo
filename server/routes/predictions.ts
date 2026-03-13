@@ -29,25 +29,17 @@ router.get('/', async (req, res) => {
       .where(eq(predictionsSimple.isPublished, true))
       .orderBy(desc(predictionsSimple.matchDate));
 
-    // Adiciona o slug em cada palpite
-    const withSlug = allPredictions.map((p: any) => ({
-      ...p,
-      slug: generateSlug(p.homeTeamName, p.awayTeamName, p.matchDate),
-    }));
-
-    res.json(withSlug);
+    res.json(allPredictions);
   } catch (error) {
     console.error('Erro ao buscar palpites:', error);
     res.status(500).json([]);
   }
 });
 
-// ─── GET /api/predictions/by-slug/:slug — Palpite por slug amigável ──────────
+// ─── GET /api/predictions/by-slug/:slug — Palpite por slug (legado, páginas antigas) ───
 router.get('/by-slug/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
-
-    // Busca todos os palpites publicados e filtra pelo slug gerado
     const allPredictions = await db
       .select()
       .from(predictionsSimple)
@@ -65,69 +57,6 @@ router.get('/by-slug/:slug', async (req, res) => {
   } catch (error) {
     console.error('Erro ao buscar palpite por slug:', error);
     res.status(500).json({ error: 'Erro ao buscar palpite' });
-  }
-});
-
-// ─── GET /api/predictions/sitemap — Lista de slugs para sitemap dinâmico ─────
-router.get('/sitemap', async (req, res) => {
-  try {
-    const allPredictions = await db
-      .select({
-        homeTeamName: predictionsSimple.homeTeamName,
-        awayTeamName: predictionsSimple.awayTeamName,
-        matchDate: predictionsSimple.matchDate,
-        createdAt: predictionsSimple.createdAt,
-      })
-      .from(predictionsSimple)
-      .where(eq(predictionsSimple.isPublished, true))
-      .orderBy(desc(predictionsSimple.matchDate));
-
-    const slugs = allPredictions.map((p: any) => ({
-      slug: generateSlug(p.homeTeamName, p.awayTeamName, p.matchDate),
-      lastmod: new Date(p.createdAt).toISOString().split('T')[0],
-    }));
-
-    res.json(slugs);
-  } catch (error) {
-    console.error('Erro ao gerar sitemap de palpites:', error);
-    res.status(500).json([]);
-  }
-});
-
-// ─── GET /sitemap.xml — Sitemap XML dinâmico completo ────────────────────────
-router.get('/sitemap-predictions.xml', async (req, res) => {
-  try {
-    const allPredictions = await db
-      .select({
-        homeTeamName: predictionsSimple.homeTeamName,
-        awayTeamName: predictionsSimple.awayTeamName,
-        matchDate: predictionsSimple.matchDate,
-        createdAt: predictionsSimple.createdAt,
-      })
-      .from(predictionsSimple)
-      .where(eq(predictionsSimple.isPublished, true))
-      .orderBy(desc(predictionsSimple.matchDate));
-
-    const baseUrl = 'https://www.mestredarodada.com.br';
-
-    const urls = allPredictions
-      .map((p: any) => {
-        const slug = generateSlug(p.homeTeamName, p.awayTeamName, p.matchDate);
-        const lastmod = new Date(p.createdAt).toISOString().split('T')[0];
-        return `  <url>\n    <loc>${baseUrl}/palpite/${slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`;
-      })
-      .join('\n');
-
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
-</urlset>`;
-
-    res.header('Content-Type', 'application/xml');
-    res.send(xml);
-  } catch (error) {
-    console.error('Erro ao gerar sitemap XML:', error);
-    res.status(500).send('Erro ao gerar sitemap');
   }
 });
 
@@ -164,7 +93,7 @@ router.get('/:matchId', async (req, res) => {
     }
 
     const p = prediction[0];
-    res.json({ ...p, slug: generateSlug(p.homeTeamName, p.awayTeamName, p.matchDate) });
+    res.json(p);
   } catch (error) {
     console.error('Erro ao buscar palpite:', error);
     res.status(500).json({ error: 'Erro ao buscar palpite' });

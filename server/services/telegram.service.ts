@@ -83,10 +83,6 @@ ${confidenceEmoji[prediction.mainConfidence] || '⭐'} ${escapeMarkdown(vencedor
 ${confidenceEmoji[prediction.goalsConfidence] || '⭐'} ${escapeMarkdown(prediction.goalsPrediction)} (${prediction.goalsConfidence})
 
 ${cornersSection}${cardsSection}${btsSection}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📝 *ANÁLISE*
-${escapeMarkdown(prediction.justification)}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 Boa sorte com seus palpites! 🍀
     `.trim();
 

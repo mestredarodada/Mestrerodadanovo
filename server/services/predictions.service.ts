@@ -305,9 +305,10 @@ Antes de gerar o JSON final, você deve realizar mentalmente (ou no campo de jus
   "cardsPrediction": "string",
   "halfTimePrediction": "string",
   "likelyScore": "X x Y",
-  "bestBet": "Descrição curta e direta da melhor aposta",
-  "justification": "Máximo 2 frases técnicas focadas em estatística (ex: Poisson indica 65% de chance de Under 2.5)."
-}`;
+  "bestBet": "Descrição curta e direta da melhor aposta"
+}
+
+IMPORTANTE: NÃO inclua campo "justification" no JSON. Retorne APENAS os campos listados acima.`;
 
 // ─── Gerar palpite via Groq ───────────────────────────────────────────────────
 
@@ -494,7 +495,7 @@ async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'>
     cardsConfidence: ai.cardsConfidence || null,
     extraTip: ai.bestBet || null,
     extraConfidence: ai.bestBetConfidence || null,
-    justification: ai.justification || 'Análise gerada automaticamente.',
+    justification: '',
     isPublished: true,
   };
 

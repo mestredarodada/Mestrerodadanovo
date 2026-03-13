@@ -189,36 +189,6 @@ async function startServer() {
     }
   });
 
-  // Sitemap dinâmico de palpites (acessível em /sitemap-predictions.xml)
-  app.get("/sitemap-predictions.xml", async (_req, res) => {
-    try {
-      const { getDb } = await import('../db');
-      const { sql } = await import('drizzle-orm');
-      const database = getDb();
-      const result = await database.execute(sql`
-        SELECT home_team_name, away_team_name, match_date, created_at
-        FROM predictions_simple
-        WHERE is_published = true
-        ORDER BY match_date DESC
-      `);
-      const rows = result.rows || result as any[];
-      const baseUrl = 'https://www.mestredarodada.com.br';
-      const normalize = (str: string) =>
-        str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      const urls = rows.map((row: any) => {
-        const date = new Date(row.match_date);
-        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        const slug = `${normalize(row.home_team_name)}-x-${normalize(row.away_team_name)}-${dateStr}`;
-        const lastmod = new Date(row.created_at).toISOString().split('T')[0];
-        return `  <url>\n    <loc>${baseUrl}/palpite/${slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`;
-      }).join('\n');
-      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`;
-      res.header('Content-Type', 'application/xml');
-      res.send(xml);
-    } catch (e) {
-      res.status(500).send('Erro ao gerar sitemap');
-    }
-  });
 
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
