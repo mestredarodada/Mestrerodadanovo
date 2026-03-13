@@ -110,6 +110,12 @@ ${escapeMarkdown(prediction.justification)}
                 url: 'https://www.mestredarodada.com.br',
               },
             ],
+            [
+              {
+                text: '📱 Baixar App — Google Play Store',
+                url: 'https://play.google.com/store/apps/details?id=br.com.mestredarodada.app',
+              },
+            ],
           ],
         },
       }
