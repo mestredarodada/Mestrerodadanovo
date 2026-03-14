@@ -163,24 +163,28 @@ async function fetchNextMatchWithoutPrediction(): Promise<any | null> {
 
   console.log(`[Mestre] ${allowedMatches.length} jogos nas próximas 48h (de ${scheduledMatches.length} total)`);
 
-  for (const match of allowedMatches) {
-    // ─── Cache inteligente: verifica se já existe palpite válido ───
-    const existing = await db
-      .select({ id: predictionsSimple.id, createdAt: predictionsSimple.createdAt })
-      .from(predictionsSimple)
-      .where(eq(predictionsSimple.matchId, String(match.id)));
+  // ─── OTIMIZAÇÃO: Busca todos os palpites existentes de uma vez ───
+  const matchIds = allowedMatches.map(m => String(m.id));
+  const existingPredictions = await db
+    .select({ matchId: predictionsSimple.matchId, createdAt: predictionsSimple.createdAt })
+    .from(predictionsSimple)
+    .where(sql`match_id IN (${sql.join(matchIds.map(id => sql`${id}`), sql`, `)})`);
 
-    if (existing.length === 0) {
+  const existingMap = new Map(existingPredictions.map(p => [p.matchId, p.createdAt]));
+
+  for (const match of allowedMatches) {
+    const createdAt = existingMap.get(String(match.id));
+
+    if (!createdAt) {
       const compName = match.competitionName || getCompetitionName(match.competitionCode || '');
       console.log(`[Mestre] Próximo jogo sem palpite: ${match.homeTeam.name} vs ${match.awayTeam.name} (${compName})`);
       return match;
     }
 
     // Palpite com menos de 20h → pula (cache inteligente)
-    const createdAt = new Date(existing[0].createdAt);
-    const hoursSince = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
+    const hoursSince = (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60);
     if (hoursSince < 20) {
-      continue; // Palpite recente, usa o cache
+      continue; // Palpite recente, pula instantaneamente
     }
 
     const compName = match.competitionName || getCompetitionName(match.competitionCode || '');
