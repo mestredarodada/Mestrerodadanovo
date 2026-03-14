@@ -156,12 +156,12 @@ async function fetchNextMatchWithoutPrediction(): Promise<any | null> {
 
   // Filtra apenas jogos nas próximas 24h
   const now = Date.now();
-  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+  const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
   const allowedMatches = sortedMatches.filter(
-    (m: any) => new Date(m.utcDate).getTime() - now <= TWENTY_FOUR_HOURS
+    (m: any) => new Date(m.utcDate).getTime() - now <= FORTY_EIGHT_HOURS
   );
 
-  console.log(`[Mestre] ${allowedMatches.length} jogos nas próximas 24h (de ${scheduledMatches.length} total)`);
+  console.log(`[Mestre] ${allowedMatches.length} jogos nas próximas 48h (de ${scheduledMatches.length} total)`);
 
   for (const match of allowedMatches) {
     // ─── Cache inteligente: verifica se já existe palpite válido ───
@@ -606,7 +606,7 @@ export async function generateAllPredictions(): Promise<{ generated: number; err
 
   let generated = 0, errors = 0, skipped = 0;
 
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 20; i++) {
     const result = await generateNextPrediction();
     if (result.status === 'generated') {
       generated++;

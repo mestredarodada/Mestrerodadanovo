@@ -17,7 +17,7 @@ import { startBlogJob } from "../services/blog.service";
 // Gera 1 palpite a cada 10 minutos, respeitando o rate limit da API gratuita.
 // Pula automaticamente jogos que já têm palpite recente (menos de 20h).
 
-const PREDICTION_JOB_INTERVAL_MS = 10 * 60 * 1000; // 10 minutos
+const PREDICTION_JOB_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
 
 function startPredictionJob() {
   if (!process.env.GROQ_API_KEY || !process.env.FOOTBALL_DATA_API_KEY) {
