@@ -184,15 +184,8 @@ async function fetchNextMatchWithoutPrediction(): Promise<any | null> {
       return match;
     }
 
-    // Palpite com menos de 20h → pula (cache inteligente)
-    const hoursSince = (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60);
-    if (hoursSince < 20) {
-      continue; // Palpite recente, pula instantaneamente
-    }
-
-    const compName = match.competitionName || getCompetitionName(match.competitionCode || '');
-    console.log(`[Mestre] Palpite desatualizado (${hoursSince.toFixed(1)}h): ${match.homeTeam.name} vs ${match.awayTeam.name} (${compName})`);
-    return match;
+    // Pula jogos que já possuem palpite (foco total em novos jogos)
+    continue;
   }
 
   console.log('[Mestre] Todos os jogos agendados já têm palpites recentes.');
