@@ -97,7 +97,7 @@ ${cornersSection}${cardsSection}${btsSection}━━━━━━━━━━━�
             [
               {
                 text: '🎲 Apostar Agora — Casa Recomendada',
-                url: 'https://1wfypv.com/?open=register&p=c2f3',
+                url: 'https://lkxw.cc/b648211f',
               },
             ],
             [
