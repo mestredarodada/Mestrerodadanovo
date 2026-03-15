@@ -684,7 +684,7 @@ export function AIResults() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
           >
-            <DaySummary results={currentResults} />
+            {/* DaySummary removido a pedido do usuário para focar nos resultados individuais */}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentResults.map((r: any, i: number) => (
