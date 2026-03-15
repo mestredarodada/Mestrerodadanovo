@@ -100,14 +100,34 @@ export default function RecentResults() {
         const matchDate = new Date(r.matchDate);
         return matchDate >= todayStart;
       })
-      .sort((a: any, b: any) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
+      .sort((a: any, b: any) => {
+        // Ordenação por taxa de acerto (hitCount/totalChecked)
+        const rateA = a.totalChecked > 0 ? a.hitCount / a.totalChecked : 0;
+        const rateB = b.totalChecked > 0 ? b.hitCount / b.totalChecked : 0;
+        
+        if (rateB !== rateA) return rateB - rateA;
+        // Se a taxa for igual, ordena por total de acertos absoluto
+        if (b.hitCount !== a.hitCount) return b.hitCount - a.hitCount;
+        // Por fim, ordena por data (mais recentes primeiro)
+        return new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime();
+      });
 
     const yesterdayResults = results
       .filter((r: any) => {
         const matchDate = new Date(r.matchDate);
         return matchDate >= yesterdayStart && matchDate < todayStart;
       })
-      .sort((a: any, b: any) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
+      .sort((a: any, b: any) => {
+        // Ordenação por taxa de acerto (hitCount/totalChecked)
+        const rateA = a.totalChecked > 0 ? a.hitCount / a.totalChecked : 0;
+        const rateB = b.totalChecked > 0 ? b.hitCount / b.totalChecked : 0;
+        
+        if (rateB !== rateA) return rateB - rateA;
+        // Se a taxa for igual, ordena por total de acertos absoluto
+        if (b.hitCount !== a.hitCount) return b.hitCount - a.hitCount;
+        // Por fim, ordena por data (mais recentes primeiro)
+        return new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime();
+      });
 
     return { todayResults, yesterdayResults };
   }, [results]);

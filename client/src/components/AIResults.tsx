@@ -598,15 +598,31 @@ export function AIResults() {
     const yesterdayStart = new Date(todayStart);
     yesterdayStart.setDate(yesterdayStart.getDate() - 1);
 
-    const todayResults = results.filter((r: any) => {
-      const matchDate = new Date(r.matchDate);
-      return matchDate >= todayStart;
-    });
+    const todayResults = results
+      .filter((r: any) => {
+        const matchDate = new Date(r.matchDate);
+        return matchDate >= todayStart;
+      })
+      .sort((a: any, b: any) => {
+        const rateA = a.totalChecked > 0 ? a.hitCount / a.totalChecked : 0;
+        const rateB = b.totalChecked > 0 ? b.hitCount / b.totalChecked : 0;
+        if (rateB !== rateA) return rateB - rateA;
+        if (b.hitCount !== a.hitCount) return b.hitCount - a.hitCount;
+        return new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime();
+      });
 
-    const yesterdayResults = results.filter((r: any) => {
-      const matchDate = new Date(r.matchDate);
-      return matchDate >= yesterdayStart && matchDate < todayStart;
-    });
+    const yesterdayResults = results
+      .filter((r: any) => {
+        const matchDate = new Date(r.matchDate);
+        return matchDate >= yesterdayStart && matchDate < todayStart;
+      })
+      .sort((a: any, b: any) => {
+        const rateA = a.totalChecked > 0 ? a.hitCount / a.totalChecked : 0;
+        const rateB = b.totalChecked > 0 ? b.hitCount / b.totalChecked : 0;
+        if (rateB !== rateA) return rateB - rateA;
+        if (b.hitCount !== a.hitCount) return b.hitCount - a.hitCount;
+        return new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime();
+      });
 
     return { todayResults, yesterdayResults };
   }, [results]);
