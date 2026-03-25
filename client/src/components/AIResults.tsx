@@ -567,12 +567,12 @@ function NoResultsMessage({ day }: { day: DayFilter }) {
       </div>
       <div className="text-center">
         <p className="font-poppins font-black text-lg text-foreground">
-          {day === 'today' ? 'Sem resultados hoje' : 'Sem resultados ontem'}
+          {day === 'today' ? 'Aguardando Jogos de Hoje' : 'Sem Jogos de Elite Ontem'}
         </p>
         <p className="text-muted-foreground text-sm mt-1">
           {day === 'today'
-            ? 'Quando os jogos de hoje com palpites do Mestre forem finalizados, os resultados aparecerão aqui.'
-            : 'Não houve jogos finalizados com palpites do Mestre ontem.'}
+            ? 'Assim que os jogos das principais ligas forem finalizados, os resultados da IA aparecerão aqui!'
+            : 'Não houve jogos das ligas principais (Brasileirão, Europa) finalizados ontem.'}
         </p>
       </div>
     </motion.div>
@@ -654,10 +654,10 @@ export function AIResults() {
           <Trophy size={28} className="text-white" />
         </div>
         <div className="text-center">
-          <p className="font-poppins font-black text-lg text-foreground">Aguardando jogos finalizados</p>
+          <p className="font-poppins font-black text-lg text-foreground">Aguardando Rodada de Elite</p>
           <p className="text-muted-foreground text-sm mt-1">
-            Quando os jogos com palpites do Mestre forem finalizados,<br />
-            o resultado da análise aparecerá aqui.
+            O Mestre está monitorando o Brasileirão e as ligas europeias.<br />
+            Os resultados aparecerão aqui assim que a bola rolar!
           </p>
         </div>
       </div>

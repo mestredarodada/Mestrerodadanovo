@@ -523,10 +523,10 @@ export function Predictions() {
           <Sparkles size={48} className="text-primary" />
         </motion.div>
         <div className="text-center max-w-xs">
-          <p className="font-bold text-lg text-foreground">Palpites em Breve</p>
+          <p className="font-bold text-lg text-foreground">Aguardando Próximos Jogos</p>
           <p className="text-sm text-muted-foreground mt-2">
-            O Mestre está analisando os próximos jogos de todas as ligas com dados reais.
-            Os palpites são gerados automaticamente antes de cada rodada.
+            O Mestre está monitorando as principais ligas (Brasileirão, Premier League, La Liga, Champions e mais). 
+            Assim que a próxima rodada começar, os palpites aparecerão aqui automaticamente!
           </p>
           <p className="text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1">
             <RefreshCw size={11} />
@@ -611,12 +611,12 @@ export function Predictions() {
           <Clock size={36} className="text-muted-foreground/50" />
           <div className="text-center">
             <p className="font-semibold text-foreground text-sm">
-              {activeTab === 'today' ? 'Nenhum palpite para hoje' : 'Nenhum palpite para amanhã ainda'}
+              {activeTab === 'today' ? 'Sem jogos de elite hoje' : 'Sem jogos de elite amanhã'}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {activeTab === 'today'
-                ? 'Os palpites de hoje já foram finalizados ou ainda serão gerados.'
-                : 'Os palpites de amanhã serão gerados automaticamente nas próximas horas.'}
+                ? 'Não há jogos das principais ligas agendados para hoje. O Mestre volta na próxima rodada!'
+                : 'Aguardando a confirmação dos jogos das principais ligas para amanhã.'}
             </p>
           </div>
         </div>
