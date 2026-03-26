@@ -157,14 +157,14 @@ async function fetchNextMatchWithoutPrediction(): Promise<any | null> {
   // Filtra apenas jogos futuros (ignora o que já começou ou está prestes a começar hoje)
   const now = Date.now();
   const MIN_DELAY = 30 * 60 * 1000; // Ignora jogos que começam em menos de 30 min
-  const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+  const NINETY_SIX_HOURS = 96 * 60 * 60 * 1000; // 4 dias
   
   const allowedMatches = sortedMatches.filter((m: any) => {
     const matchTime = new Date(m.utcDate).getTime();
-    return (matchTime - now > MIN_DELAY) && (matchTime - now <= FORTY_EIGHT_HOURS);
+    return (matchTime - now > MIN_DELAY) && (matchTime - now <= NINETY_SIX_HOURS);
   });
 
-  console.log(`[Mestre] ${allowedMatches.length} jogos futuros encontrados nas próximas 48h.`);
+  console.log(`[Mestre] ${allowedMatches.length} jogos futuros encontrados nas próximas 96h.`);
 
   // ─── OTIMIZAÇÃO: Busca todos os palpites existentes de uma vez ───
   const matchIds = allowedMatches.map(m => String(m.id));

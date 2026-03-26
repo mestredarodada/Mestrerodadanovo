@@ -458,9 +458,9 @@ export function Predictions() {
     refetchInterval: 5 * 60 * 1000,
   });
 
-  const [activeTab, setActiveTab] = useState<'today' | 'tomorrow'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'tomorrow' | 'upcoming'>('today');
 
-  // Filtra e ordena palpites por Hoje ou Amanhã
+  // Filtra e ordena palpites por Hoje, Amanhã ou Próximos
   const todayPredictions = useMemo(() => {
     if (!predictions || predictions.length === 0) return [];
     return [...predictions]
@@ -475,7 +475,17 @@ export function Predictions() {
       .sort((a: any, b: any) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
   }, [predictions]);
 
-  const activePredictions = activeTab === 'today' ? todayPredictions : tomorrowPredictions;
+  const upcomingPredictions = useMemo(() => {
+    if (!predictions || predictions.length === 0) return [];
+    return [...predictions]
+      .filter((p: any) => p.matchDate && !isToday(new Date(p.matchDate)) && !isTomorrow(new Date(p.matchDate)) && new Date(p.matchDate) > new Date())
+      .sort((a: any, b: any) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+  }, [predictions]);
+
+  const activePredictions = 
+    activeTab === 'today' ? todayPredictions : 
+    activeTab === 'tomorrow' ? tomorrowPredictions : 
+    upcomingPredictions;
 
   if (isLoading) {
     return (
@@ -597,6 +607,24 @@ export function Predictions() {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab('upcoming')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
+            activeTab === 'upcoming'
+              ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md shadow-purple-500/20'
+              : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border'
+          }`}
+        >
+          <TrendingUp size={14} />
+          Próximos
+          {upcomingPredictions.length > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+              activeTab === 'upcoming' ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
+            }`}>
+              {upcomingPredictions.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Cards de palpites filtrados */}
@@ -611,12 +639,14 @@ export function Predictions() {
           <Clock size={36} className="text-muted-foreground/50" />
           <div className="text-center">
             <p className="font-semibold text-foreground text-sm">
-              {activeTab === 'today' ? 'Sem jogos de elite hoje' : 'Sem jogos de elite amanhã'}
+              {activeTab === 'today' ? 'Sem jogos de elite hoje' : activeTab === 'tomorrow' ? 'Sem jogos de elite amanhã' : 'Sem jogos futuros agendados'}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {activeTab === 'today'
                 ? 'Não há jogos das principais ligas agendados para hoje. O Mestre volta na próxima rodada!'
-                : 'Aguardando a confirmação dos jogos das principais ligas para amanhã.'}
+                : activeTab === 'tomorrow'
+                ? 'Aguardando a confirmação dos jogos das principais ligas para amanhã.'
+                : 'O Mestre está monitorando o calendário para as próximas rodadas.'}
             </p>
           </div>
         </div>
