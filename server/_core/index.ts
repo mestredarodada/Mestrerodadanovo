@@ -83,19 +83,41 @@ function startCleanupJob() {
 // mantendo-o acordado e garantindo que o job de palpites continue rodando.
 
 function startKeepAlive(port: number) {
+  // Tenta usar a URL externa do Render, caso contrário usa o localhost
   const SERVICE_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${port}`;
-  const KEEP_ALIVE_INTERVAL_MS = 4 * 60 * 1000; // 4 minutos
+  const KEEP_ALIVE_INTERVAL_MS = 2 * 60 * 1000; // Reduzido para 2 minutos para maior segurança
 
-  console.log(`[KeepAlive] ✅ Iniciado — ping a cada 4 min em ${SERVICE_URL}/health`);
+  console.log(`[KeepAlive] ✅ Iniciado — ping a cada 2 min em ${SERVICE_URL}/health`);
 
-  setInterval(async () => {
+  // Função de ping
+  const ping = async () => {
     try {
-      await axios.get(`${SERVICE_URL}/health`, { timeout: 10000 });
+      // Adiciona um timestamp para evitar cache de rede
+      await axios.get(`${SERVICE_URL}/health?t=${Date.now()}`, { 
+        timeout: 15000,
+        headers: { 'User-Agent': 'MestreKeepAlive/1.0' }
+      });
       console.log('[KeepAlive] 💓 Ping OK — servidor acordado');
     } catch (err: any) {
       console.warn('[KeepAlive] ⚠️ Ping falhou:', err.message);
+      
+      // Se falhar com a URL externa, tenta o localhost como fallback interno
+      if (SERVICE_URL.includes('render.com')) {
+        try {
+          await axios.get(`http://localhost:${port}/health`, { timeout: 5000 });
+          console.log('[KeepAlive] 💓 Fallback Localhost OK');
+        } catch (e) {
+          // Silencioso
+        }
+      }
     }
-  }, KEEP_ALIVE_INTERVAL_MS);
+  };
+
+  // Executa o primeiro ping após 30 segundos
+  setTimeout(ping, 30 * 1000);
+
+  // Agenda os pings regulares
+  setInterval(ping, KEEP_ALIVE_INTERVAL_MS);
 }
 
 // ─── Servidor ─────────────────────────────────────────────────────────────────
