@@ -268,7 +268,7 @@ export const appRouter = router({
           for (const upd of rowsToUpdate) {
             try {
               await database.execute(
-                sql.raw(`UPDATE predictions_simple SET match_date = '${upd.utcDate}'${upd.matchday !== null ? `, matchday = ${upd.matchday}` : ''} WHERE match_id = '${upd.matchId}'`)
+                sql.raw(`UPDATE predictions_simple SET match_date = '${upd.utcDate}' WHERE match_id = '${upd.matchId}'`)
               );
             } catch (e) {
               console.warn(`[PREDICTIONS v2.0] Erro ao atualizar data do match ${upd.matchId}:`, e);
@@ -281,7 +281,7 @@ export const appRouter = router({
           .map((row: any) => {
             const apiMatch = apiMatchMap.get(String(row.match_id));
             const matchDate = apiMatch ? apiMatch.utcDate : row.match_date;
-            const matchday = apiMatch?.matchday ? Number(apiMatch.matchday) : (row.matchday ? Number(row.matchday) : null);
+            const matchday = apiMatch?.matchday ? Number(apiMatch.matchday) : null;
 
             return {
               id: row.id,
@@ -293,23 +293,16 @@ export const appRouter = router({
               matchDate,
               mainPrediction: row.main_prediction,
               mainConfidence: row.main_confidence,
-              mainProbability: row.main_probability ? Number(row.main_probability) : null,
-              homeProbability: row.home_probability ? Number(row.home_probability) : null,
-              drawProbability: row.draw_probability ? Number(row.draw_probability) : null,
-              awayProbability: row.away_probability ? Number(row.away_probability) : null,
               goalsPrediction: row.goals_prediction,
               goalsConfidence: row.goals_confidence,
-              goalsProbability: row.goals_probability ? Number(row.goals_probability) : null,
               bothTeamsToScore: row.both_teams_to_score,
               bothTeamsToScoreConfidence: row.both_teams_to_score_confidence,
-              btsProbability: row.bts_probability ? Number(row.bts_probability) : null,
               cornersPrediction: row.corners_prediction,
               cornersConfidence: row.corners_confidence,
               cardsPrediction: row.cards_prediction,
               cardsConfidence: row.cards_confidence,
               doubleChance: row.double_chance,
               doubleChanceConfidence: row.double_chance_confidence,
-              doubleChanceProbability: row.double_chance_probability ? Number(row.double_chance_probability) : null,
               halfTimePrediction: row.half_time_prediction,
               halfTimeConfidence: row.half_time_confidence,
               matchday,
