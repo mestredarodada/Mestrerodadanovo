@@ -30,33 +30,33 @@ async function ensureAnalyticsTable() {
 
 // ─── POST /api/analytics/event — Registrar evento ─────────────────────────
 router.post('/event', async (req, res) => {
-  try {
-    await ensureAnalyticsTable();
-    const db = getDb();
-    
-    const { eventType, page, label, sessionId, referrer } = req.body;
-    
-    if (!eventType || !page) {
-      return res.status(400).json({ error: 'eventType e page são obrigatórios' });
+  // Responde imediatamente para não travar o frontend
+  res.json({ ok: true });
+
+  // Processa o registro em background
+  (async () => {
+    try {
+      const { eventType, page, label, sessionId, referrer } = req.body;
+      if (!eventType || !page) return;
+
+      const db = getDb();
+      
+      // Detectar tipo de dispositivo pelo User-Agent
+      const ua = req.headers['user-agent'] || '';
+      let deviceType = 'desktop';
+      if (/mobile|android|iphone|ipad|tablet/i.test(ua)) {
+        deviceType = /ipad|tablet/i.test(ua) ? 'tablet' : 'mobile';
+      }
+
+      await db.execute(sql`
+        INSERT INTO analytics_events (event_type, page, label, session_id, referrer, device_type, created_at)
+        VALUES (${eventType}, ${page}, ${label || null}, ${sessionId || null}, ${referrer || null}, ${deviceType}, NOW())
+      `);
+    } catch (error) {
+      // Erro silencioso em background para não afetar o servidor
+      console.error('[Analytics] Erro ao registrar evento em background:', error instanceof Error ? error.message : error);
     }
-
-    // Detectar tipo de dispositivo pelo User-Agent
-    const ua = req.headers['user-agent'] || '';
-    let deviceType = 'desktop';
-    if (/mobile|android|iphone|ipad|tablet/i.test(ua)) {
-      deviceType = /ipad|tablet/i.test(ua) ? 'tablet' : 'mobile';
-    }
-
-    await db.execute(sql`
-      INSERT INTO analytics_events (event_type, page, label, session_id, referrer, device_type, created_at)
-      VALUES (${eventType}, ${page}, ${label || null}, ${sessionId || null}, ${referrer || null}, ${deviceType}, NOW())
-    `);
-
-    return res.json({ ok: true });
-  } catch (error) {
-    console.error('[Analytics] Erro ao registrar evento:', error);
-    return res.status(500).json({ error: 'Erro interno' });
-  }
+  })();
 });
 
 // ─── GET /api/analytics/dashboard — Dashboard com métricas ────────────────
