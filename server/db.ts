@@ -18,9 +18,9 @@ export function getDb() {
     try {
       _pool = new Pool({
         connectionString,
-        max: 10,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
+        max: 5, // Reduzido para evitar estourar o limite do plano básico do Render
+        idleTimeoutMillis: 10000, // Fecha conexões ociosas mais rápido
+        connectionTimeoutMillis: 10000, // Dá mais tempo para conectar se o banco estiver lento
       });
       _db = drizzle(_pool, { schema });
     } catch (error) {

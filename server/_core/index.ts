@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import compression from "compression";
 import { createServer } from "http";
 import net from "net";
 import axios from "axios";
@@ -145,6 +146,7 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
+  app.use(compression()); // Ativa compressão Gzip para todas as respostas
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
