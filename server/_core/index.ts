@@ -142,9 +142,6 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  // 1. Executa migrações automáticas (cria tabelas se não existirem)
-  await runMigrations();
-
   const app = express();
   const server = createServer(app);
 
@@ -225,8 +222,12 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  server.listen(port, () => {
+  server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
+
+    // 1. Executa migrações automáticas (cria tabelas se não existirem) em background
+    // Isso evita que o servidor trave na inicialização se o banco demorar a responder
+    runMigrations().catch(err => console.error('[Migrate] Erro crítico na migração:', err));
 
     // 2. Inicia o job de geração sequencial de palpites
     startPredictionJob();
