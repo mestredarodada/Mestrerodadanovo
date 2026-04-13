@@ -150,6 +150,22 @@ function AIShareButtons({ r, hitCount, totalChecked }: { r: any; hitCount: numbe
 
   const [copied, setCopied] = useState(false);
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Resultado: ${home} x ${away}`,
+          text: text,
+          url: SITE_URL
+        });
+      } catch (err) {
+        handleCopyShare();
+      }
+    } else {
+      handleCopyShare();
+    }
+  };
+
   const handleCopyShare = async () => {
     try {
       await navigator.clipboard.writeText(text);
@@ -167,9 +183,6 @@ function AIShareButtons({ r, hitCount, totalChecked }: { r: any; hitCount: numbe
     }
   };
 
-  const encoded = encodeURIComponent(text);
-  const urlEncoded = encodeURIComponent(SITE_URL);
-
   return (
     <div className="pt-3 mt-3 border-t border-border/40">
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
@@ -177,33 +190,13 @@ function AIShareButtons({ r, hitCount, totalChecked }: { r: any; hitCount: numbe
         Compartilhar resultado
       </p>
       <div className="flex gap-2">
-        <a
-          href={`https://wa.me/?text=${encoded}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90"
-          style={{ backgroundColor: '#25D366' }}
+        <button
+          onClick={handleShare}
+          className="flex items-center justify-center gap-2 w-full bg-muted hover:bg-muted/80 active:scale-95 text-foreground font-bold text-xs rounded-xl py-3 px-4 transition-all duration-200 border border-border"
         >
-          WhatsApp
-        </a>
-        <a
-          href={`https://t.me/share/url?url=${urlEncoded}&text=${encoded}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90"
-          style={{ backgroundColor: '#229ED9' }}
-        >
-          Telegram
-        </a>
-        <a
-          href={`https://www.facebook.com/sharer/sharer.php?u=${urlEncoded}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90"
-          style={{ backgroundColor: '#1877F2' }}
-        >
-          Facebook
-        </a>
+          <Share2 size={14} />
+          <span>{copied ? 'Copiado!' : 'Compartilhar Resultado'}</span>
+        </button>
       </div>
     </div>
   );
