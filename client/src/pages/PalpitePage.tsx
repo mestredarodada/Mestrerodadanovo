@@ -232,8 +232,7 @@ export default function PalpitePage() {
 
   // Texto de compartilhamento
   function getShareText(p: Prediction): string {
-    // No app, remove link de afiliado do texto de compartilhamento
-    const affiliateBlock = isAppWebView() ? '' : `\n\n🏆 Casa recomendada para apostar com as melhores Odds:\nhttps://go.aff.br4-partners.com/hxfcxr0x`;
+    const affiliateBlock = `\n\n🏆 Casa recomendada para apostar com as melhores Odds:\nhttps://go.aff.br4-partners.com/hxfcxr0x`;
     return `🤖 *Palpite do Mestre da Rodada*\n\n⚽ ${p.homeTeamName} x ${p.awayTeamName}\n📊 Resultado: *${translatePrediction(p.mainPrediction)}*${p.likelyScore ? ` (${p.likelyScore})` : ''}\n⚽ Gols: ${translatePrediction(p.goalsPrediction)}\n🎯 Ambas marcam: ${p.bothTeamsToScore === 'YES' ? 'SIM' : 'NÃO'}${p.bestBet ? `\n⭐ Melhor aposta: ${p.bestBet}` : ''}${affiliateBlock}\n\n🔗 Mais palpites grátis por IA:\nwww.mestredarodada.com.br — Palpites feitos por inteligência artificial 100% grátis para você.`;
   }
 
@@ -485,28 +484,26 @@ export default function PalpitePage() {
           </div>
         )}
 
-        {/* ── Casa de Apostas — oculto no app para conformidade com Google Play ── */}
-        {!isApp && (
-          <a
-            href="https://go.aff.br4-partners.com/hxfcxr0x"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${p.homeTeamName} x ${p.awayTeamName}`)}
-            className="block bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-2xl p-5 hover:border-green-500/60 transition-all duration-200 group"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-green-400 font-semibold mb-1">🏆 Casa Recomendada</p>
-                <p className="text-white font-bold">Aposte com as melhores Odds</p>
-                <p className="text-slate-400 text-xs mt-1">Cadastre-se e aproveite os bônus de boas-vindas</p>
-              </div>
-              <ExternalLink className="w-5 h-5 text-green-400 group-hover:scale-110 transition-transform" />
+        {/* ── Casa de Apostas ── */}
+        <a
+          href="https://go.aff.br4-partners.com/hxfcxr0x"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${p.homeTeamName} x ${p.awayTeamName}`)}
+          className="block bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-2xl p-5 hover:border-green-500/60 transition-all duration-200 group"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-green-400 font-semibold mb-1">🏆 Casa Recomendada</p>
+              <p className="text-white font-bold">Aposte com as melhores Odds</p>
+              <p className="text-slate-400 text-xs mt-1">Cadastre-se e aproveite os bônus de boas-vindas</p>
             </div>
-          </a>
-        )}
+            <ExternalLink className="w-5 h-5 text-green-400 group-hover:scale-110 transition-transform" />
+          </div>
+        </a>
 
-        {/* ── Botões de Compartilhar - oculto no app para evitar erro de conexão ── */}
-        {!isApp && <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-5">
+        {/* ── Botões de Compartilhar ── */}
+        <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Share2 className="w-4 h-4 text-slate-400" />
             <span className="text-sm font-bold text-slate-300">Compartilhar este palpite</span>
@@ -534,7 +531,7 @@ export default function PalpitePage() {
               Facebook
             </button>
           </div>
-        </div>}
+        </div>
 
         {/* ── CTA Ver Mais Palpites ── */}
         <div className="text-center bg-gradient-to-br from-purple-900/30 to-pink-900/30 border border-purple-500/20 rounded-2xl p-6">

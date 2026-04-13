@@ -103,7 +103,6 @@ function ShareButtons({ prediction }: { prediction: any }) {
   const affiliateBlock = `\n\n🎰 Odds incríveis — Cadastre-se:\n${AFFILIATE_LINK}`;
   const text = `⚽ *${home} x ${away}*\n\n🤖 Palpite do Mestre da Rodada\n📊 *${main.text}*${score}${goals}${bts}${extra}${affiliateBlock}\n\n📲 Baixe o app oficial:\n${PLAYSTORE_LINK}\n\n🌐 ${SITE_URL}`;
 
-  const isApp = isAppWebView();
   const [copied, setCopied] = useState(false);
 
   // No app, copia texto para área de transferência
@@ -124,35 +123,6 @@ function ShareButtons({ prediction }: { prediction: any }) {
       setTimeout(() => setCopied(false), 2500);
     }
   };
-
-  // No app, mostra botão de copiar + botão site oficial
-  if (isApp) {
-    return (
-      <div className="px-4 pb-4 space-y-2">
-        <button
-          onClick={handleCopyShare}
-          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 ${
-            copied
-              ? 'bg-gradient-to-r from-emerald-600 to-emerald-700'
-              : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90'
-          }`}
-        >
-          {copied ? (
-            <>
-              <CheckCircle size={14} />
-              Copiado! Cole no WhatsApp ou Telegram
-            </>
-          ) : (
-            <>
-              <Copy size={14} />
-              Copiar palpite para compartilhar
-            </>
-          )}
-        </button>
-
-      </div>
-    );
-  }
 
   // No navegador, mostra botões individuais
   const encoded = encodeURIComponent(text);
@@ -422,22 +392,20 @@ function PredictionCard({ prediction }: { prediction: any }) {
                 </div>
               )}
 
-              {/* Botão de afiliado — oculto no app para conformidade com Google Play */}
-              {!isApp && (
-                <div className="px-4 mb-3">
-                  <a
-                    href={AFFILIATE_LINK}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${prediction.homeTeamName} x ${prediction.awayTeamName}`)}
-                    className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 text-white font-bold text-sm rounded-xl py-3 px-4 transition-all duration-200 shadow-md hover:shadow-orange-300/40 dark:hover:shadow-orange-900/40"
-                  >
-                    <ExternalLink size={15} />
-                    <span>Faça sua aposta aqui</span>
-                    <span className="text-orange-200 text-xs font-normal hidden sm:inline">(casa recomendada)</span>
-                  </a>
-                </div>
-              )}
+              {/* Botão de afiliado */}
+              <div className="px-4 mb-3">
+                <a
+                  href={AFFILIATE_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${prediction.homeTeamName} x ${prediction.awayTeamName}`)}
+                  className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 text-white font-bold text-sm rounded-xl py-3 px-4 transition-all duration-200 shadow-md hover:shadow-orange-300/40 dark:hover:shadow-orange-900/40"
+                >
+                  <ExternalLink size={15} />
+                  <span>Faça sua aposta aqui</span>
+                  <span className="text-orange-200 text-xs font-normal hidden sm:inline">(casa recomendada)</span>
+                </a>
+              </div>
 
 
               {/* Botões de compartilhamento */}

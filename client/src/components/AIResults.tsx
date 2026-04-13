@@ -150,7 +150,6 @@ function AIShareButtons({ r, hitCount, totalChecked }: { r: any; hitCount: numbe
 
   const text = `⚽ *${home} ${r.actualHomeGoals} x ${r.actualAwayGoals} ${away}*${compName ? `\n🏆 ${compName}` : ''}\n\n🤖 Análise do Mestre da Rodada:\n📊 Resultado: ${formatPrediction(r.mainPrediction, home, away)} ${r.resultHit ? '✅' : '❌'}\n⚽ Gols: ${formatPrediction(r.goalsPrediction, home, away)} ${r.goalsHit === true ? '✅' : r.goalsHit === false ? '❌' : ''}\n🎯 Ambas marcam: ${r.bothTeamsToScore === 'YES' ? 'SIM' : 'NÃO'} ${r.bttsHit === true ? '✅' : r.bttsHit === false ? '❌' : ''}\n${r.doubleChance ? `🛡️ Dupla chance: ${r.doubleChance} ${r.doubleChanceHit === true ? '✅' : r.doubleChanceHit === false ? '❌' : ''}\n` : ''}${r.halfTimePrediction ? `⏱️ 1º Tempo: ${r.halfTimePrediction} ${r.halfTimeHit === true ? '✅' : r.halfTimeHit === false ? '❌' : ''}\n` : ''}${r.scoreHit ? `🎯 PLACAR EXATO: ${r.likelyScore} ✅🔥\n` : ''}\n📈 *${hitCount} de ${totalChecked} acertos*\n\n🎰 Odds incríveis — Cadastre-se:\n${AFFILIATE_LINK}\n\n📲 Baixe o app oficial:\n${PLAYSTORE_LINK}\n\n🌐 ${SITE_URL}`;
 
-  const isApp = isAppWebView();
   const [copied, setCopied] = useState(false);
 
   const handleCopyShare = async () => {
@@ -169,33 +168,6 @@ function AIShareButtons({ r, hitCount, totalChecked }: { r: any; hitCount: numbe
       setTimeout(() => setCopied(false), 2500);
     }
   };
-
-  if (isApp) {
-    return (
-      <div className="pt-3 mt-3 border-t border-border/40">
-        <button
-          onClick={handleCopyShare}
-          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 ${
-            copied
-              ? 'bg-gradient-to-r from-emerald-600 to-emerald-700'
-              : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90'
-          }`}
-        >
-          {copied ? (
-            <>
-              <CheckCircle size={14} />
-              Copiado! Cole no WhatsApp ou Telegram
-            </>
-          ) : (
-            <>
-              <Copy size={14} />
-              Copiar resultado para compartilhar
-            </>
-          )}
-        </button>
-      </div>
-    );
-  }
 
   const encoded = encodeURIComponent(text);
   const urlEncoded = encodeURIComponent(SITE_URL);

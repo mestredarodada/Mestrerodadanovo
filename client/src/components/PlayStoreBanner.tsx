@@ -18,9 +18,7 @@ const LINK_PLAYSTORE = 'https://play.google.com/store/apps/details?id=br.com.mes
 export default function PlayStoreBanner() {
   const [visible, setVisible] = useState(true);
 
-  // Não mostrar no app WebView
-  const isApp = typeof navigator !== 'undefined' && /MestreDaRodadaApp/i.test(navigator.userAgent);
-  if (isApp || !visible) return null;
+  if (!visible) return null;
 
   return (
     <div className="w-full bg-gradient-to-r from-[#0a0e1a] via-[#0f1a2e] to-[#0a0e1a] border-b border-blue-900/30 relative overflow-hidden">
