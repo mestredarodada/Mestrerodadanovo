@@ -420,6 +420,19 @@ function AIResultCard({ r, index }: { r: any; index: number }) {
                 </div>
               )}
 
+              {/* Botão de aposta no card de resultado */}
+              <div className="mt-4 mb-2">
+                <a
+                  href={AFFILIATE_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 text-white font-bold text-sm rounded-xl py-3 px-4 transition-all duration-200 shadow-md"
+                >
+                  <CreditCard size={15} />
+                  <span>Faça sua aposta aqui</span>
+                </a>
+              </div>
+
               <AIShareButtons r={r} hitCount={r.hitCount} totalChecked={r.totalChecked} />
             </div>
           </motion.div>
