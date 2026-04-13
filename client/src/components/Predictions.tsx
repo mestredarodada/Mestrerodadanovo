@@ -26,7 +26,7 @@ import {
 import { format, isToday, isTomorrow, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-const AFFILIATE_LINK = 'https://go.aff.br4-partners.com/hxfcxr0x';
+const AFFILIATE_LINK = 'https://go.aff.br4-partners.com/hxfcxr0x'; // Updated to BR4BET - Force Cache Clear
 
 
 
