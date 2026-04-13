@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { analytics } from '@/hooks/useAnalytics';
-import { useIsAppWebView, isAppWebView } from '@/hooks/useIsAppWebView';
+
 import { useParams, Link } from 'wouter';
 import {
   ArrowLeft,
@@ -130,7 +130,7 @@ export default function PalpitePage() {
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const isApp = useIsAppWebView();
+
 
   useEffect(() => {
     if (!slug) return;

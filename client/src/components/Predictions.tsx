@@ -1,5 +1,5 @@
 import { trpc } from '@/lib/trpc';
-import { useIsAppWebView, isAppWebView } from '@/hooks/useIsAppWebView';
+
 import { analytics } from '@/hooks/useAnalytics';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMemo, useState } from 'react';
@@ -217,7 +217,7 @@ function MarketItem({
 
 function PredictionCard({ prediction }: { prediction: any }) {
   const [expanded, setExpanded] = useState(false);
-  const isApp = useIsAppWebView();
+
 
   const home = prediction.homeTeamName || 'Time A';
   const away = prediction.awayTeamName || 'Time B';

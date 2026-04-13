@@ -9,9 +9,7 @@ const SITE_URL = 'https://www.mestredarodada.com.br';
 const PLAYSTORE_LINK = 'https://play.google.com/store/apps/details?id=br.com.mestredarodada.app';
 const AFFILIATE_LINK = 'https://go.aff.br4-partners.com/hxfcxr0x';
 
-function isAppWebView() {
-  return typeof navigator !== 'undefined' && /MestreDaRodadaApp/i.test(navigator.userAgent);
-}
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
