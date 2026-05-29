@@ -451,7 +451,7 @@ ${ai.bestBet || 'N/D'}
             [
               {
                 text: '🎲 Apostar Agora — Casa Recomendada',
-                url: 'https://go.aff.br4-partners.com/hxfcxr0x',
+                url: 'https://lkrh.pro/563cd347',
               },
             ],
             [

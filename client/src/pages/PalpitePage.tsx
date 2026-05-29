@@ -232,7 +232,7 @@ export default function PalpitePage() {
 
   // Texto de compartilhamento
   function getShareText(p: Prediction): string {
-    const affiliateBlock = `\n\n🏆 Casa recomendada para apostar com as melhores Odds:\nhttps://go.aff.br4-partners.com/hxfcxr0x`;
+    const affiliateBlock = `\n\n🏆 Casa recomendada para apostar com as melhores Odds:\nhttps://lkrh.pro/563cd347`;
     return `🤖 *Palpite do Mestre da Rodada*\n\n⚽ ${p.homeTeamName} x ${p.awayTeamName}\n📊 Resultado: *${translatePrediction(p.mainPrediction)}*${p.likelyScore ? ` (${p.likelyScore})` : ''}\n⚽ Gols: ${translatePrediction(p.goalsPrediction)}\n🎯 Ambas marcam: ${p.bothTeamsToScore === 'YES' ? 'SIM' : 'NÃO'}${p.bestBet ? `\n⭐ Melhor aposta: ${p.bestBet}` : ''}${affiliateBlock}\n\n🔗 Mais palpites grátis por IA:\nwww.mestredarodada.com.br — Palpites feitos por inteligência artificial 100% grátis para você.`;
   }
 
@@ -497,7 +497,7 @@ export default function PalpitePage() {
 
         {/* ── Casa de Apostas ── */}
         <a
-          href="https://go.aff.br4-partners.com/hxfcxr0x"
+          href="https://lkrh.pro/563cd347"
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => analytics.trackAffiliateClick(window.location.pathname, `${p.homeTeamName} x ${p.awayTeamName}`)}
