@@ -66,46 +66,53 @@
         padding: 20px;
       }
       .redirect-content {
-        max-width: 500px;
+        max-width: 450px;
         background: #1e293b;
-        padding: 40px;
+        padding: 35px;
         border-radius: 24px;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         border: 1px solid #334155;
       }
       .redirect-title {
-        font-size: 24px;
+        font-size: 22px;
         font-weight: 700;
         margin-bottom: 16px;
         color: #f8fafc;
+        line-height: 1.3;
+      }
+      .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 24px;
       }
       .redirect-btn {
-        display: inline-block;
+        display: block;
         background: #3b82f6;
         color: white;
-        padding: 16px 32px;
+        padding: 14px 24px;
         border-radius: 12px;
         font-weight: 600;
         text-decoration: none;
-        margin-top: 24px;
         transition: transform 0.2s, background 0.2s;
-        box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: none;
+        cursor: pointer;
+        font-size: 15px;
       }
       .redirect-btn:hover {
         background: #2563eb;
         transform: translateY(-2px);
       }
-      .redirect-cancel {
-        margin-top: 20px;
-        color: #94a3b8;
-        font-size: 14px;
-        cursor: pointer;
-        text-decoration: underline;
-        background: none;
-        border: none;
+      .redirect-btn-secondary {
+        background: #334155;
+        border: 1px solid #475569;
+      }
+      .redirect-btn-secondary:hover {
+        background: #475569;
       }
       .redirect-timer {
-        margin-top: 15px;
+        margin-top: 20px;
         font-size: 12px;
         color: #64748b;
       }
@@ -117,16 +124,19 @@
     <div id="redirect-overlay">
       <div class="redirect-content">
         <div class="redirect-title">Faça seus palpites na plataforma que recomendamos!</div>
-        <p style="color: #94a3b8;">Cadastre-se já e comece a ganhar com as melhores análises.</p>
-        <a href="https://lkrh.pro/563cd347" class="redirect-btn">Cadastrar Agora</a>
-        <br>
-        <button onclick="cancelRedirect()" class="redirect-cancel">Continuar no Mestre da Rodada</button>
-        <div class="redirect-timer" id="timer-text">Redirecionando automaticamente em 5s...</div>
+        <p style="color: #94a3b8; font-size: 14px;">Cadastre-se já e comece a ganhar com as melhores análises.</p>
+        
+        <div class="button-group">
+          <a href="https://lkrh.pro/563cd347" class="redirect-btn">Cadastrar na Plataforma</a>
+          <button onclick="cancelRedirect()" class="redirect-btn redirect-btn-secondary">Acessar Mestre da Rodada</button>
+        </div>
+
+        <div class="redirect-timer" id="timer-text">Redirecionando automaticamente em 10s...</div>
       </div>
     </div>
 
     <script>
-      let timeLeft = 5;
+      let timeLeft = 10;
       const targetUrl = "https://lkrh.pro/563cd347";
       
       const timer = setInterval(() => {
