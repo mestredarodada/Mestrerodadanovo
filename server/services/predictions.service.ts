@@ -270,32 +270,31 @@ ${h2hSummary}
 Analise com base nesses dados reais e forneça palpites específicos e fundamentados para este jogo.`;
 }
 
-// ─── NOVO Super Prompt de Elite v2.0 ─────────────────────────────────────────
+// ─── NOVO Super Prompt de Elite v3.0 (O Analista Humano) ───────────────────
 
-const SYSTEM_PROMPT_V2 = `Você é o "Mestre da Rodada v2.0", um Quant-Analyst de Elite especializado em modelos preditivos de futebol internacional. Sua missão é fornecer palpites com precisão cirúrgica, utilizando lógica estatística avançada.
+const SYSTEM_PROMPT_V3 = `Você é o "Mestre da Rodada v3.0", o analista de futebol mais respeitado e preciso do mercado. Você não é uma calculadora fria; você é um especialista que une estatística pesada com o "feeling" e o contexto real do futebol profissional.
 
-### PROCESSO DE PENSAMENTO OBRIGATÓRIO (Chain-of-Thought):
-Antes de gerar o JSON final, você deve realizar mentalmente (ou no campo de justificativa interna) a seguinte análise:
-1. **Cálculo de Força Relativa:** Compare a média de gols marcados/sofridos (Attack/Defense Strength) de cada time nos últimos 10 jogos, ajustando pelo peso do mando de campo.
-2. **Aplicação de Poisson:** Utilize a Distribuição de Poisson para estimar a probabilidade de cada equipe marcar 0, 1, 2, 3 ou 4+ gols. O placar exato deve ser a combinação de maior probabilidade estatística.
-3. **Análise de xG (Gols Esperados):** Considere se os times estão sendo eficientes ou se estão "devendo" gols com base no volume de jogo.
-4. **Contexto Tático:** Avalie se é um jogo de "under" (defesas sólidas, jogo truncado) ou "over" (ataques explosivos, defesas expostas).
+### SUA PERSONALIDADE:
+- **Analítico, mas arrojado:** Você não tem medo de prever placares altos se os ataques forem bons.
+- **Contextual:** Você entende que uma Copa do Mundo ou uma Final vale mais que um jogo comum.
+- **Especialista:** Você fala com autoridade sobre tática, peso da camisa e motivação.
 
-### REGRAS DE MERCADO (Obrigatórias para todos os jogos):
-1. **Quem vence (mainPrediction):** HOME | DRAW | AWAY.
-2. **Dupla Chance (doubleChance):** 1X | X2 | 12.
-3. **Gols (goalsPrediction):** Escolha a linha de maior valor (OVER/UNDER 0.5 a 3.5). Formato: OVER_X_5 ou UNDER_X_5 (ex: OVER_2_5, UNDER_1_5).
-4. **Ambas Marcam (bothTeamsToScore):** YES | NO (Crucial: deve ser coerente com o likelyScore).
-5. **Escanteios (cornersPrediction):** Baseie-se na média de cruzamentos e volume ofensivo. Formato: OVER_X_5 ou UNDER_X_5 (ex: OVER_8_5).
-6. **Cartões (cardsPrediction):** Considere a agressividade das equipes e o peso do confronto (clássicos = mais cartões). Formato: OVER_X_5 ou UNDER_X_5 (ex: OVER_3_5).
-7. **1º Tempo (halfTimePrediction):** HOME | DRAW | AWAY.
-8. **Melhor Aposta (bestBet):** O mercado de maior confiança (ex: "Handicap +1.5 Time A" ou "Ambas Marcam").
+### PROCESSO DE ANÁLISE (Obrigatório):
+1. **Peso da Camisa e Tradição:** Considere se um dos times é um "Gigante" (ex: Brasil, Argentina, Real Madrid). Gigantes tendem a crescer em jogos decisivos, mesmo que a fase não seja perfeita.
+2. **Importância do Torneio:** Se for Copa do Mundo ou Champions League, a motivação é 200%. Jogos de "mata-mata" ou estreias tendem a ser mais intensos.
+3. **Lógica Estatística (Poisson + xG):** Use as médias de gols enviadas, mas ajuste-as pelo contexto. Se os times quase não se enfrentaram (H2H escasso), use a força individual das ligas/seleções como base.
+4. **Fator Humano:** Se um time vem de 3 derrotas, ele pode estar em crise ou desesperado pela vitória. Analise o "clima" do jogo.
 
-### FORMATAÇÃO DO PLACAR EXATO (likelyScore):
-- O placar deve ser o resultado direto da sua análise de Poisson. 
-- **Auto-Correção:** Se você prever "Ambas Marcam: NO", o placar NÃO pode ser 1x1, 2x1, etc. Se prever "Over 2.5", a soma dos gols no placar deve ser >= 3.
+### REGRAS DE MERCADO:
+- **mainPrediction:** HOME | DRAW | AWAY.
+- **doubleChance:** 1X | X2 | 12.
+- **goalsPrediction:** OVER_X_5 ou UNDER_X_5 (Ex: OVER_2_5). **Seja ousado se os ataques forem bons!** Evite prever sempre 0x0 ou 1x0.
+- **bothTeamsToScore:** YES | NO.
+- **likelyScore:** O placar exato mais provável (Ex: "2 x 1", "3 x 1", "2 x 2").
+- **bestBet:** A aposta de maior valor (Ex: "Ambas Marcam", "Over 2.5 Gols", "Vitória do Mandante").
+- **justification:** Uma análise profissional de 2 a 3 parágrafos explicando o "porquê" do palpite, mencionando o peso da camisa, a fase dos times e o contexto do campeonato. **Fale como um comentarista de elite.**
 
-### SAÍDA JSON (Apenas JSON puro, sem markdown, sem texto adicional):
+### SAÍDA JSON (Apenas JSON puro):
 {
   "mainPrediction": "string",
   "doubleChance": "string",
@@ -305,10 +304,9 @@ Antes de gerar o JSON final, você deve realizar mentalmente (ou no campo de jus
   "cardsPrediction": "string",
   "halfTimePrediction": "string",
   "likelyScore": "X x Y",
-  "bestBet": "Descrição curta e direta da melhor aposta"
-}
-
-IMPORTANTE: NÃO inclua campo "justification" no JSON. Retorne APENAS os campos listados acima.`;
+  "bestBet": "string",
+  "justification": "Sua análise detalhada e humana aqui"
+}`;
 
 // ─── Gerar palpite via Groq ───────────────────────────────────────────────────
 
@@ -334,187 +332,59 @@ async function generatePredictionWithAI(prompt: string): Promise<any> {
         {
           model: MODEL,
           messages: [
-            { role: 'system', content: SYSTEM_PROMPT_V2 },
+            { role: 'system', content: SYSTEM_PROMPT_V3 },
             { role: 'user', content: prompt },
           ],
-          temperature: 0.35,
-          max_tokens: 1200,
+          temperature: 0.65, // Aumentado para dar mais "personalidade" e sair do padrão
+          max_tokens: 1500,
         },
         {
           headers: {
             Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
-          timeout: 30000,
         }
       );
 
-      const content = response.data.choices[0]?.message?.content || '';
+      const content = response.data.choices[0].message.content;
+      // Tenta extrair JSON se a IA mandar texto em volta
       const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('Resposta da IA não contém JSON válido');
-      console.log(`[Groq] ✅ Sucesso com ${keyLabel}`);
-      return JSON.parse(jsonMatch[0]);
-
+      return JSON.parse(jsonMatch ? jsonMatch[0] : content);
     } catch (err: any) {
       lastError = err;
-      const status = err?.response?.status;
-      if (status === 429) {
-        console.log(`[Groq] ⚠️ Rate limit (429) na ${keyLabel} — tentando próxima chave...`);
-        if (i < groqKeys.length - 1) await sleep(3000);
-      } else {
-        throw err;
-      }
+      console.warn(`[Groq] ${keyLabel} falhou:`, err.message);
+      continue;
     }
   }
 
-  throw new Error(`Todas as ${groqKeys.length} chaves Groq retornaram 429. Tentando novamente no próximo ciclo.`);
+  throw lastError || new Error('Todas as chaves do Groq falharam');
 }
 
-// ─── Enviar palpite ao Telegram ───────────────────────────────────────────────
+// ─── Salvar no Banco ─────────────────────────────────────────────────────────
 
-async function sendToTelegram(match: any, ai: any): Promise<void> {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN || '';
-  const chatId = process.env.TELEGRAM_CHAT_ID || '';
-
-  if (!botToken || !chatId) {
-    console.log('[Telegram] Variáveis não configuradas — pulando envio.');
-    return;
-  }
-
-  const home = match.homeTeam.name;
-  const away = match.awayTeam.name;
-  const competitionName = match.competitionName || match.competition?.name || 'Liga Internacional';
-
-  const formatLine = (val: string | undefined, overPrefix = 'Mais de ', underPrefix = 'Menos de ') => {
-    if (!val) return 'N/D';
-    return val
-      .replace('OVER_', overPrefix)
-      .replace('UNDER_', underPrefix)
-      .replace(/_/g, '.');
-  };
-
-  const mainLabel = ai.mainPrediction === 'HOME' ? `🏠 Vitória ${home}` :
-    ai.mainPrediction === 'DRAW' ? '🤝 Empate' : `✈️ Vitória ${away}`;
-
-  const btsLabel = ai.bothTeamsToScore === 'YES' ? '✅ Ambas marcam: SIM' : '❌ Ambas marcam: NÃO';
-
-  const htLabel = ai.halfTimePrediction === 'HOME' ? `${home} vence no 1ºT` :
-    ai.halfTimePrediction === 'DRAW' ? 'Empate no 1ºT' : `${away} vence no 1ºT`;
-
-  const dcLabel = ai.doubleChance
-    ? ai.doubleChance === '1X' ? `${home} ou Empate`
-    : ai.doubleChance === 'X2' ? `Empate ou ${away}`
-    : `${home} ou ${away}`
-    : null;
-
-  const matchDateStr = new Date(match.utcDate).toLocaleString('pt-BR', {
-    timeZone: 'America/Sao_Paulo',
-    day: '2-digit', month: '2-digit',
-    hour: '2-digit', minute: '2-digit'
-  });
-
-  const message = `🏆 *MESTRE DA RODADA v2.0 — PALPITE*
-
-⚽ *${home} x ${away}*
-📅 ${matchDateStr} | ${competitionName}
-
-━━━━━━━━━━━━━━━━━━━━
-🎯 *RESULTADO*
-${mainLabel}
-
-━━━━━━━━━━━━━━━━━━━━
-📋 *MERCADOS*
-⚽ Gols: ${formatLine(ai.goalsPrediction)} gols
-${btsLabel}
-⏱️ 1º Tempo: ${htLabel}
-🔲 Escanteios: ${formatLine(ai.cornersPrediction)} escanteios
-🟨 Cartões: ${formatLine(ai.cardsPrediction)} cartões${dcLabel ? `
-🔀 Dupla Chance: ${dcLabel}` : ''}
-
-━━━━━━━━━━━━━━━━━━━━
-⭐ *MELHOR APOSTA DO JOGO*
-${ai.bestBet || 'N/D'}
-🎯 Placar mais provável: *${ai.likelyScore || 'N/D'}*
-
-━━━━━━━━━━━━━━━━━━━━`;
-
-  try {
-    await axios.post(
-      `https://api.telegram.org/bot${botToken}/sendMessage`,
-      {
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown',
-        disable_web_page_preview: true,
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: '🎲 Apostar Agora — Casa Recomendada',
-                url: 'https://lkrh.pro/563cd347',
-              },
-            ],
-            [
-              {
-                text: '⚽ Ver Todos os Palpites — mestredarodada.com.br',
-                url: 'https://www.mestredarodada.com.br',
-              },
-            ],
-          ],
-        },
-      },
-      { timeout: 10000 }
-    );
-    console.log(`[Telegram] ✅ Palpite enviado: ${home} vs ${away} (${competitionName})`);
-  } catch (err: any) {
-    console.error(`[Telegram] ❌ Erro ao enviar: ${err.message}`);
-  }
-}
-
-// ─── Salvar palpite no banco ──────────────────────────────────────────────────
-
-async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'> {
-  const competitionName = match.competitionName || match.competition?.name || '';
+async function savePrediction(match: any, ai: any) {
+  const competitionName = match.competitionName || getCompetitionName(match.competitionCode || '');
   
-  const data: Record<string, any> = {
+  const data = {
     matchId: String(match.id),
     homeTeamName: match.homeTeam.name,
     awayTeamName: match.awayTeam.name,
-    homeTeamCrest: match.homeTeam.crest || null,
-    awayTeamCrest: match.awayTeam.crest || null,
-    matchDate: new Date(match.utcDate),
-    mainPrediction: ai.mainPrediction || 'DRAW',
-    mainConfidence: ai.mainConfidence || 'MEDIUM',
-    goalsPrediction: ai.goalsPrediction || 'OVER_2_5',
-    goalsConfidence: ai.goalsConfidence || 'MEDIUM',
-    bothTeamsToScore: ai.bothTeamsToScore || null,
-    bothTeamsToScoreConfidence: ai.bothTeamsToScoreConfidence || null,
-    cornersPrediction: ai.cornersPrediction || null,
-    cornersConfidence: ai.cornersConfidence || null,
-    cardsPrediction: ai.cardsPrediction || null,
-    cardsConfidence: ai.cardsConfidence || null,
-    extraTip: ai.bestBet || null,
-    extraConfidence: ai.bestBetConfidence || null,
-    justification: '',
-    isPublished: true,
+    utcDate: match.utcDate,
+    mainPrediction: ai.mainPrediction,
+    goalsPrediction: ai.goalsPrediction,
+    bothTeamsToScore: ai.bothTeamsToScore,
+    justification: ai.justification || '',
+    homeScore: null,
+    awayScore: null,
+    isCorrect: null,
   };
 
-  // Campos extras via SQL direto
+  // Campos extras via SQL direto para manter compatibilidade com o schema estendido
   const extraFields: Record<string, any> = {
-    home_probability: ai.homeProbability ?? null,
-    draw_probability: ai.drawProbability ?? null,
-    away_probability: ai.awayProbability ?? null,
-    main_probability: ai.mainProbability ?? null,
-    goals_probability: ai.goalsProbability ?? null,
-    bts_probability: ai.btsProbability ?? null,
     double_chance: ai.doubleChance ?? null,
-    double_chance_confidence: ai.doubleChanceConfidence ?? null,
-    double_chance_probability: ai.doubleChanceProbability ?? null,
     half_time_prediction: ai.halfTimePrediction ?? null,
-    half_time_confidence: ai.halfTimeConfidence ?? null,
     likely_score: ai.likelyScore ?? null,
     best_bet: ai.bestBet ?? null,
-    best_bet_confidence: ai.bestBetConfidence ?? null,
     matchday: match.matchday ?? null,
     competition_code: match.competitionCode ?? null,
     competition_name: competitionName || null,
@@ -534,7 +404,7 @@ async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'>
     if (setClauses) {
       await db.execute(sql.raw(`UPDATE predictions_simple SET ${setClauses} WHERE match_id = '${data.matchId}'`));
     }
-    console.log(`✅ [Mestre] Palpite CRIADO: ${data.homeTeamName} vs ${data.awayTeamName} (${competitionName})`);
+    console.log(`✅ [Mestre v3.0] Palpite CRIADO: ${data.homeTeamName} vs ${data.awayTeamName}`);
     return 'saved';
   } else {
     await db.update(predictionsSimple).set(data as any).where(eq(predictionsSimple.matchId, data.matchId));
@@ -545,65 +415,62 @@ async function savePrediction(match: any, ai: any): Promise<'saved' | 'updated'>
     if (setClauses) {
       await db.execute(sql.raw(`UPDATE predictions_simple SET ${setClauses} WHERE match_id = '${data.matchId}'`));
     }
-    console.log(`🔄 [Mestre] Palpite ATUALIZADO: ${data.homeTeamName} vs ${data.awayTeamName} (${competitionName})`);
+    console.log(`🔄 [Mestre v3.0] Palpite ATUALIZADO: ${data.homeTeamName} vs ${data.awayTeamName}`);
     return 'updated';
   }
 }
 
-// ─── Gerar palpite de UM jogo por vez (MULTI-LIGA) ───────────────────────────
+// ─── Enviar para o Telegram ──────────────────────────────────────────────────
+
+async function sendToTelegram(match: any, ai: any) {
+  try {
+    const { sendPredictionToTelegram } = await import('./telegram.service');
+    await sendPredictionToTelegram(match, ai);
+  } catch (e) {
+    console.error('[Mestre] Erro ao enviar Telegram:', e);
+  }
+}
+
+// ─── Gerar palpite de UM jogo por vez ─────────────────────────────────────────
 
 export async function generateNextPrediction(): Promise<{ status: 'generated' | 'skipped' | 'error'; match?: string; error?: string }> {
-  console.log('\n[Mestre v2.0] ⏰ Job iniciado — verificando próximo jogo sem palpite (TODAS as ligas)...');
+  console.log('\n[Mestre v3.0] ⏰ Job iniciado — analisando próximo jogo...');
 
   try {
-    // 1. Busca próximo jogo sem palpite (multi-liga)
     const match = await fetchNextMatchWithoutPrediction();
 
     if (!match) {
-      console.log('[Mestre v2.0] ✅ Todos os jogos já têm palpites. Nada a fazer.');
+      console.log('[Mestre v3.0] ✅ Sem novos jogos para analisar.');
       return { status: 'skipped' };
     }
 
     const competitionCode = match.competitionCode || match.competition?.code || 'BSA';
-    const competitionName = match.competitionName || getCompetitionName(competitionCode);
-
-    // 2. Busca dados base da competição (com cache)
     const { finishedMatches } = await getBaseDataForCompetition(competitionCode);
 
-    // Pequeno delay para respeitar rate limit
     await sleep(2000);
 
-    // 3. Monta prompt rico
     const prompt = buildRichPrompt(match, finishedMatches);
 
-    // 4. Gera palpite com IA
-    console.log(`[Mestre v2.0] 🤖 Gerando palpite para: ${match.homeTeam.name} vs ${match.awayTeam.name} (${competitionName})`);
+    console.log(`[Mestre v3.0] 🤖 Gerando análise profissional para: ${match.homeTeam.name} vs ${match.awayTeam.name}`);
     const aiPrediction = await generatePredictionWithAI(prompt);
 
-    // 5. Salva no banco
     const saveStatus = await savePrediction(match, aiPrediction);
 
-    // 6. Envia ao Telegram apenas se for palpite novo
     if (saveStatus === 'saved') {
       await sendToTelegram(match, aiPrediction);
     }
 
-    const matchName = `${match.homeTeam.name} vs ${match.awayTeam.name} (${competitionName})`;
+    const matchName = `${match.homeTeam.name} vs ${match.awayTeam.name}`;
     return { status: 'generated', match: matchName };
 
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error(`[Mestre v2.0] ❌ Erro ao gerar palpite: ${msg}`);
+    console.error(`[Mestre v3.0] ❌ Erro: ${msg}`);
     return { status: 'error', error: msg };
   }
 }
 
-// ─── Compatibilidade legada ───────────────────────────────────────────────────
-
 export async function generateAllPredictions(): Promise<{ generated: number; errors: number; skipped: number }> {
-  if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY não configurada');
-  if (!process.env.FOOTBALL_DATA_API_KEY) throw new Error('FOOTBALL_DATA_API_KEY não configurada');
-
   let generated = 0, errors = 0, skipped = 0;
 
   for (let i = 0; i < 20; i++) {
@@ -616,11 +483,7 @@ export async function generateAllPredictions(): Promise<{ generated: number; err
     } else {
       errors++;
     }
-
-    // Delay entre gerações (só se não foi o último)
-    if (i < 11) {
-      await sleep(3 * 60 * 1000); // 3 minutos entre cada jogo (otimizado)
-    }
+    if (i < 19) await sleep(3 * 60 * 1000);
   }
 
   return { generated, errors, skipped };
