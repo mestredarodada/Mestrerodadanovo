@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db';
 import { predictionsSimple } from '../db/schema';
-import { desc, eq, lt, and } from 'drizzle-orm';
+import { desc, eq, lt, and, sql } from 'drizzle-orm';
 import { generateAllPredictions } from '../services/predictions.service';
 
 const router = Router();
@@ -109,6 +109,17 @@ router.post('/generate/all', async (req, res) => {
   } catch (error) {
     console.error('Erro ao gerar palpites:', error);
     res.status(500).json({ error: 'Erro ao gerar palpites' });
+  }
+});
+
+// ─── ROTA DE EMERGÊNCIA: Limpar Copa do Mundo ───────────────────────────────
+router.get('/clear-wc-emergency', async (req, res) => {
+  try {
+    console.log('[EMERGÊNCIA] Limpando palpites da Copa via rota secreta...');
+    await db.execute(sql`DELETE FROM predictions_simple WHERE competition_code = 'WC'`);
+    res.send('<h1>✅ Sucesso!</h1><p>Os palpites da Copa foram apagados. O sistema irá regerá-los com a nova IA em breve.</p>');
+  } catch (error: any) {
+    res.status(500).send('<h1>❌ Erro</h1><p>' + error.message + '</p>');
   }
 });
 
