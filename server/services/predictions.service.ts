@@ -402,6 +402,8 @@ async function savePrediction(match: any, ai: any) {
     matchId: String(match.id),
     homeTeamName: match.homeTeam.name,
     awayTeamName: match.awayTeam.name,
+    homeTeamCrest: match.homeTeam.crest || null,
+    awayTeamCrest: match.awayTeam.crest || null,
     matchDate: new Date(match.utcDate),
     mainPrediction: ai.mainPrediction || 'DRAW',
     mainConfidence: '75%', 
