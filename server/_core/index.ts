@@ -230,16 +230,7 @@ async function startServer() {
     // Isso evita que o servidor trave na inicialização se o banco demorar a responder
     runMigrations().catch(err => console.error('[Migrate] Erro crítico na migração:', err));
 
-    // Limpeza de emergência dos palpites da Copa (IA v3.0)
-    try {
-      const { getDb } = await import('../db');
-      const { sql } = await import('drizzle-orm');
-      const database = getDb();
-      console.log('[Mestre] 🧹 Limpando palpites da Copa para regerar com v3.0...');
-      await database.execute(sql`DELETE FROM predictions_simple WHERE competition_code = 'WC'`);
-    } catch (e) {
-      console.error('[Mestre] Erro na limpeza WC:', e);
-    }
+    // Limpeza WC removida - já executada.
 
     // 2. Inicia o job de geração sequencial de palpites
     startPredictionJob();

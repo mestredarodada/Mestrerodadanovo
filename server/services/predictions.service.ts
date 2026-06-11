@@ -404,11 +404,16 @@ async function savePrediction(match: any, ai: any) {
     awayTeamName: match.awayTeam.name,
     matchDate: new Date(match.utcDate),
     mainPrediction: ai.mainPrediction || 'DRAW',
-    mainConfidence: '75%', // Valor padrão para campo obrigatório
+    mainConfidence: '75%', 
     goalsPrediction: ai.goalsPrediction || 'UNDER_2_5',
-    goalsConfidence: '75%', // Valor padrão para campo obrigatório
+    goalsConfidence: '75%', 
     bothTeamsToScore: ai.bothTeamsToScore || 'NO',
-    justification: ai.justification || 'Análise em processamento pelo Mestre.',
+    bothTeamsToScoreConfidence: '75%',
+    cornersPrediction: ai.cornersPrediction || 'Menos de 9.5 escanteios',
+    cornersConfidence: '70%',
+    cardsPrediction: ai.cardsPrediction || 'Menos de 4.5 cartões',
+    cardsConfidence: '70%',
+    justification: ai.justification || 'Análise detalhada em processamento.',
     isPublished: true,
     publishedAt: new Date(),
   };
