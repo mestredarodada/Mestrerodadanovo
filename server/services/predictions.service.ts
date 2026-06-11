@@ -440,7 +440,7 @@ async function savePrediction(match: any, ai: any) {
     await db.insert(predictionsSimple).values(data as any);
     const setClauses = Object.entries(extraFields)
       .filter(([, v]) => v !== null && v !== undefined)
-      .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
+      .map(([k, v]) => `"${k}" = '${String(v).replace(/'/g, "''")}'`)
       .join(', ');
     if (setClauses) {
       await db.execute(sql.raw(`UPDATE predictions_simple SET ${setClauses} WHERE match_id = '${data.matchId}'`));
@@ -451,7 +451,7 @@ async function savePrediction(match: any, ai: any) {
     await db.update(predictionsSimple).set(data as any).where(eq(predictionsSimple.matchId, data.matchId));
     const setClauses = Object.entries(extraFields)
       .filter(([, v]) => v !== null && v !== undefined)
-      .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
+      .map(([k, v]) => `"${k}" = '${String(v).replace(/'/g, "''")}'`)
       .join(', ');
     if (setClauses) {
       await db.execute(sql.raw(`UPDATE predictions_simple SET ${setClauses} WHERE match_id = '${data.matchId}'`));
