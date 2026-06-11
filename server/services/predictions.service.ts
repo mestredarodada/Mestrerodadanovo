@@ -398,8 +398,6 @@ async function savePrediction(match: any, ai: any) {
     homeScore: null,
     awayScore: null,
     isCorrect: null,
-    isPublished: true, // Publicar automaticamente com a IA v3.0
-    publishedAt: new Date(),
   };
 
   // Campos extras via SQL direto para manter compatibilidade com o schema estendido
