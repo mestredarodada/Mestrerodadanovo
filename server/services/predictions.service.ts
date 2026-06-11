@@ -402,14 +402,15 @@ async function savePrediction(match: any, ai: any) {
     matchId: String(match.id),
     homeTeamName: match.homeTeam.name,
     awayTeamName: match.awayTeam.name,
-    utcDate: match.utcDate,
-    mainPrediction: ai.mainPrediction,
-    goalsPrediction: ai.goalsPrediction,
-    bothTeamsToScore: ai.bothTeamsToScore,
-    justification: ai.justification || '',
-    homeScore: null,
-    awayScore: null,
-    isCorrect: null,
+    matchDate: new Date(match.utcDate),
+    mainPrediction: ai.mainPrediction || 'DRAW',
+    mainConfidence: '75%', // Valor padrão para campo obrigatório
+    goalsPrediction: ai.goalsPrediction || 'UNDER_2_5',
+    goalsConfidence: '75%', // Valor padrão para campo obrigatório
+    bothTeamsToScore: ai.bothTeamsToScore || 'NO',
+    justification: ai.justification || 'Análise em processamento pelo Mestre.',
+    isPublished: true,
+    publishedAt: new Date(),
   };
 
   // Campos extras via SQL direto para manter compatibilidade com o schema estendido
