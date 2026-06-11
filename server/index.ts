@@ -48,17 +48,6 @@ async function startServer() {
 
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
-    
-    // Limpeza automática dos palpites da Copa para regerar com IA v3.0
-    try {
-      const { db } = await import("./db");
-      const { sql } = await import("drizzle-orm");
-      console.log("[Mestre] Limpando palpites antigos da Copa para regerar com IA v3.0...");
-      await db.execute(sql`DELETE FROM predictions_simple WHERE competition_code = 'WC'`);
-      console.log("[Mestre] Limpeza concluída!");
-    } catch (e) {
-      console.error("[Mestre] Erro na limpeza automática:", e);
-    }
   });
 }
 
