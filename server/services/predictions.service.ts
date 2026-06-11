@@ -12,7 +12,8 @@ import {
 } from '../footballApi';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL = 'llama-3.3-70b-versatile';
+const MODEL_PRIMARY = 'llama-3.3-70b-versatile';
+const MODEL_FALLBACK = 'llama-3.1-8b-instant';
 const FOOTBALL_BASE = 'https://api.football-data.org/v4';
 
 // ─── Cache em memória dos dados base (por competição) ────────────────────────
@@ -319,45 +320,65 @@ async function generatePredictionWithAI(prompt: string): Promise<any> {
 
   if (groqKeys.length === 0) throw new Error('Nenhuma GROQ_API_KEY configurada');
 
+  const models = [MODEL_PRIMARY, MODEL_FALLBACK];
   let lastError: any;
 
-  for (let i = 0; i < groqKeys.length; i++) {
-    const apiKey = groqKeys[i];
-    const keyLabel = `chave ${i + 1}/${groqKeys.length}`;
+  // Tenta cada modelo (Primário e depois Fallback)
+  for (const currentModel of models) {
+    // Tenta cada chave de API para o modelo atual
+    for (let i = 0; i < groqKeys.length; i++) {
+      const apiKey = groqKeys[i];
+      const keyLabel = `chave ${i + 1}/${groqKeys.length} (${currentModel})`;
 
-    try {
-      console.log(`[Groq] Tentando com ${keyLabel}...`);
-      const response = await axios.post(
-        GROQ_URL,
-        {
-          model: MODEL,
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT_V3 },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.65, // Aumentado para dar mais "personalidade" e sair do padrão
-          max_tokens: 1500,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
+      try {
+        console.log(`[Groq] Tentando com ${keyLabel}...`);
+        const response = await axios.post(
+          GROQ_URL,
+          {
+            model: currentModel,
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT_V3 },
+              { role: 'user', content: prompt },
+            ],
+            temperature: 0.65,
+            max_tokens: 1500,
           },
-        }
-      );
+          {
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 30000, // 30 segundos de timeout
+          }
+        );
 
-      const content = response.data.choices[0].message.content;
-      // Tenta extrair JSON se a IA mandar texto em volta
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      return JSON.parse(jsonMatch ? jsonMatch[0] : content);
-    } catch (err: any) {
-      lastError = err;
-      console.warn(`[Groq] ${keyLabel} falhou:`, err.message);
-      continue;
+        const content = response.data.choices[0].message.content;
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('IA não retornou JSON válido');
+        
+        return JSON.parse(jsonMatch[0]);
+      } catch (err: any) {
+        lastError = err;
+        const status = err.response?.status;
+        console.warn(`[Groq] ${keyLabel} falhou (Status: ${status || '?' }):`, err.message);
+        
+        // Se for erro 429 (Rate Limit), tenta a próxima chave ou próximo modelo
+        if (status === 429) {
+          console.log(`[Groq] Limite atingido na ${keyLabel}, tentando próxima opção...`);
+          continue;
+        }
+        
+        // Outros erros: tenta a próxima chave
+        continue;
+      }
     }
+    
+    // Se chegou aqui, todas as chaves falharam para o modelo atual.
+    // O loop externo tentará o próximo modelo (Fallback).
+    console.log(`[Groq] Todas as chaves falharam para o modelo ${currentModel}.`);
   }
 
-  throw lastError || new Error('Todas as chaves do Groq falharam');
+  throw lastError || new Error('Todas as tentativas de IA falharam');
 }
 
 // ─── Salvar no Banco ─────────────────────────────────────────────────────────
