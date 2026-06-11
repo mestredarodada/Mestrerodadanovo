@@ -352,11 +352,23 @@ async function generatePredictionWithAI(prompt: string): Promise<any> {
           }
         );
 
-        const content = response.data.choices[0].message.content;
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('IA não retornou JSON válido');
+        let content = response.data.choices[0].message.content;
         
-        return JSON.parse(jsonMatch[0]);
+        // Limpeza agressiva de Markdown e blocos de código
+        content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          console.error('[Groq] Conteúdo bruto da IA:', content);
+          throw new Error('IA não retornou um bloco JSON { ... }');
+        }
+        
+        try {
+          return JSON.parse(jsonMatch[0]);
+        } catch (parseError) {
+          console.error('[Groq] Erro ao parsear JSON. Conteúdo extraído:', jsonMatch[0]);
+          throw new Error('Erro de sintaxe no JSON retornado pela IA');
+        }
       } catch (err: any) {
         lastError = err;
         const status = err.response?.status;
@@ -409,6 +421,8 @@ async function savePrediction(match: any, ai: any) {
     matchday: match.matchday ?? null,
     competition_code: match.competitionCode ?? null,
     competition_name: competitionName || null,
+    is_published: true, // Garante visibilidade no site
+    published_at: new Date(),
   };
 
   const existing = await db
@@ -445,10 +459,17 @@ async function savePrediction(match: any, ai: any) {
 
 async function sendToTelegram(match: any, ai: any) {
   try {
-    const { sendPredictionToTelegram } = await import('./telegram.service');
-    await sendPredictionToTelegram(match, ai);
-  } catch (e) {
-    console.error('[Mestre] Erro ao enviar Telegram:', e);
+    // Tenta importação dinâmica robusta para produção
+    const telegramService = await import('./telegram.service').catch(() => import('./telegram.service.js'));
+    const sendFn = telegramService.sendPredictionToTelegram || telegramService.default?.sendPredictionToTelegram;
+    
+    if (sendFn) {
+      await sendFn(match, ai);
+    } else {
+      throw new Error('Função sendPredictionToTelegram não encontrada no módulo');
+    }
+  } catch (e: any) {
+    console.error('[Mestre] Erro ao enviar Telegram:', e.message);
   }
 }
 
