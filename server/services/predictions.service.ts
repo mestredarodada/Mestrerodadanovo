@@ -298,9 +298,12 @@ const SYSTEM_PROMPT_V3 = `Você é o "Mestre da Rodada v3.0", o analista de fute
 ### SAÍDA JSON (Apenas JSON puro):
 {
   "mainPrediction": "string",
+  "mainConfidence": "string (ex: 82%)",
   "doubleChance": "string",
   "goalsPrediction": "string",
+  "goalsConfidence": "string (ex: 78%)",
   "bothTeamsToScore": "string",
+  "bothTeamsToScoreConfidence": "string (ex: 65%)",
   "cornersPrediction": "string",
   "cardsPrediction": "string",
   "halfTimePrediction": "string",
@@ -405,17 +408,17 @@ async function savePrediction(match: any, ai: any) {
     homeTeamCrest: match.homeTeam.crest || null,
     awayTeamCrest: match.awayTeam.crest || null,
     matchDate: new Date(match.utcDate),
-    mainPrediction: ai.mainPrediction || 'DRAW',
-    mainConfidence: '75%', 
-    goalsPrediction: ai.goalsPrediction || 'UNDER_2_5',
-    goalsConfidence: '75%', 
-    bothTeamsToScore: ai.bothTeamsToScore || 'NO',
-    bothTeamsToScoreConfidence: '75%',
-    cornersPrediction: ai.cornersPrediction || 'Menos de 9.5 escanteios',
-    cornersConfidence: '70%',
-    cardsPrediction: ai.cardsPrediction || 'Menos de 4.5 cartões',
-    cardsConfidence: '70%',
-    justification: ai.justification || 'Análise detalhada em processamento.',
+    mainPrediction: ai.mainPrediction,
+    mainConfidence: ai.mainConfidence || '75%', 
+    goalsPrediction: ai.goalsPrediction,
+    goalsConfidence: ai.goalsConfidence || '75%', 
+    bothTeamsToScore: ai.bothTeamsToScore,
+    bothTeamsToScoreConfidence: ai.bothTeamsToScoreConfidence || '75%',
+    cornersPrediction: ai.cornersPrediction,
+    cornersConfidence: ai.cornersConfidence || '70%',
+    cardsPrediction: ai.cardsPrediction,
+    cardsConfidence: ai.cardsConfidence || '70%',
+    justification: ai.justification,
     isPublished: true,
     publishedAt: new Date(),
   };
@@ -467,14 +470,11 @@ async function savePrediction(match: any, ai: any) {
 
 async function sendToTelegram(match: any, ai: any) {
   try {
-    // Tenta importação dinâmica robusta para produção
-    const telegramService = await import('./telegram.service').catch(() => import('./telegram.service.js'));
-    const sendFn = telegramService.sendPredictionToTelegram || telegramService.default?.sendPredictionToTelegram;
-    
-    if (sendFn) {
-      await sendFn(match, ai);
-    } else {
-      throw new Error('Função sendPredictionToTelegram não encontrada no módulo');
+    // Importação direta e robusta para produção no Render
+    const { sendPredictionToTelegram } = require('./telegram.service');
+    if (sendPredictionToTelegram) {
+      await sendPredictionToTelegram(match, ai);
+      console.log(`✉️ [Telegram] Palpite enviado: ${match.homeTeam.name} vs ${match.awayTeam.name}`);
     }
   } catch (e: any) {
     console.error('[Mestre] Erro ao enviar Telegram:', e.message);

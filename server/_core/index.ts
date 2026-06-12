@@ -232,6 +232,17 @@ async function startServer() {
 
     // Limpeza WC removida - já executada.
 
+    // 1.5 Limpeza de segurança para regerar palpites com logos e placares reais
+    (async () => {
+      try {
+        const { getDb } = await import('../db');
+        const { sql } = await import('drizzle-orm');
+        const database = getDb();
+        console.log('[Mestre] 🧹 Limpando palpites incompletos para regerar com qualidade...');
+        await database.execute(sql`DELETE FROM predictions_simple WHERE competition_code = 'WC' AND (likely_score = '0 x 0' OR home_team_crest IS NULL)`);
+      } catch (e) {}
+    })();
+
     // 2. Inicia o job de geração sequencial de palpites
     startPredictionJob();
     // 3. Inicia a limpeza automática de textos pesados (+2 dias, preserva dados dos cards)
