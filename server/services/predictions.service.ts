@@ -470,10 +470,29 @@ async function savePrediction(match: any, ai: any) {
 
 async function sendToTelegram(match: any, ai: any) {
   try {
-    // Importação direta e robusta para produção no Render
     const { sendPredictionToTelegram } = require('./telegram.service');
     if (sendPredictionToTelegram) {
-      await sendPredictionToTelegram(match, ai);
+      // Corrigido: Envia um único objeto conforme esperado pelo serviço
+      await sendPredictionToTelegram({
+        homeTeamName: match.homeTeam.name,
+        awayTeamName: match.awayTeam.name,
+        mainPrediction: ai.mainPrediction,
+        mainConfidence: ai.mainConfidence || '75%',
+        goalsPrediction: ai.goalsPrediction,
+        goalsConfidence: ai.goalsConfidence || '75%',
+        cornersPrediction: ai.cornersPrediction,
+        cornersConfidence: ai.cornersConfidence || '70%',
+        cardsPrediction: ai.cardsPrediction,
+        cardsConfidence: ai.cardsConfidence || '70%',
+        bothTeamsToScore: ai.bothTeamsToScore,
+        bothTeamsToScoreConfidence: ai.bothTeamsToScoreConfidence || '70%',
+        justification: ai.justification,
+        matchDate: new Date(match.utcDate),
+        // Campos extras para o Telegram
+        likelyScore: ai.likelyScore,
+        doubleChance: ai.doubleChance,
+        bestBet: ai.bestBet
+      });
       console.log(`✉️ [Telegram] Palpite enviado: ${match.homeTeam.name} vs ${match.awayTeam.name}`);
     }
   } catch (e: any) {
@@ -506,7 +525,7 @@ export async function generateNextPrediction(): Promise<{ status: 'generated' | 
 
     const saveStatus = await savePrediction(match, aiPrediction);
 
-    if (saveStatus === 'saved') {
+    if (saveStatus === 'saved' || saveStatus === 'updated') {
       await sendToTelegram(match, aiPrediction);
     }
 

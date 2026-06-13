@@ -18,6 +18,10 @@ interface TelegramMessage {
   bothTeamsToScoreConfidence?: string;
   justification: string;
   matchDate: Date;
+  // Novos campos
+  likelyScore?: string;
+  doubleChance?: string;
+  bestBet?: string;
 }
 
 export async function sendPredictionToTelegram(prediction: TelegramMessage): Promise<boolean> {
@@ -69,6 +73,18 @@ export async function sendPredictionToTelegram(prediction: TelegramMessage): Pro
       ? `🎯 *AMBAS MARCAM*\n${confidenceEmoji[prediction.bothTeamsToScoreConfidence || ''] || '⭐'} ${escapeMarkdown(prediction.bothTeamsToScore)} (${prediction.bothTeamsToScoreConfidence || 'N/A'})\n\n`
       : '';
 
+    const scoreSection = prediction.likelyScore
+      ? `🔢 *PLACAR PROVÁVEL*\n🔥 ${escapeMarkdown(prediction.likelyScore)}\n\n`
+      : '';
+
+    const doubleChanceSection = prediction.doubleChance
+      ? `🛡️ *DUPLA CHANCE*\n✅ ${escapeMarkdown(prediction.doubleChance)}\n\n`
+      : '';
+
+    const bestBetSection = prediction.bestBet
+      ? `⭐ *MELHOR APOSTA*\n💎 ${escapeMarkdown(prediction.bestBet)}\n\n`
+      : '';
+
     const message = `
 🏆 *PALPITE DO MESTRE DA RODADA* 🏆
 
@@ -79,10 +95,13 @@ export async function sendPredictionToTelegram(prediction: TelegramMessage): Pro
 🎯 *VENCEDOR*
 ${confidenceEmoji[prediction.mainConfidence] || '⭐'} ${escapeMarkdown(vencedor)} (${prediction.mainConfidence})
 
-⚽ *GOLS*
+${scoreSection}${doubleChanceSection}${bestBetSection}⚽ *GOLS*
 ${confidenceEmoji[prediction.goalsConfidence] || '⭐'} ${escapeMarkdown(prediction.goalsPrediction)} (${prediction.goalsConfidence})
 
-${cornersSection}${cardsSection}${btsSection}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${cornersSection}${cardsSection}${btsSection}📝 *ANÁLISE DO MESTRE*
+${escapeMarkdown(prediction.justification)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 Boa sorte com seus palpites! 🍀
     `.trim();
 

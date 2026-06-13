@@ -377,15 +377,32 @@ function PredictionCard({ prediction }: { prediction: any }) {
               </div>
 
 
-              {/* Botões de compartilhamento */}
-              <ShareButtons prediction={prediction} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
+	              {/* Justificativa da IA */}
+	              {prediction.justification && (
+	                <div className="px-4 mb-4">
+	                  <div className="bg-muted/30 rounded-xl p-3 border border-border/50">
+	                    <div className="flex items-center gap-1.5 mb-2">
+	                      <Sparkles size={12} className="text-purple-500" />
+	                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
+	                        Análise do Mestre
+	                      </span>
+	                    </div>
+	                    <p className="text-xs text-foreground leading-relaxed whitespace-pre-line italic">
+	                      "{prediction.justification}"
+	                    </p>
+	                  </div>
+	                </div>
+	              )}
+	
+	              {/* Botões de compartilhamento */}
+	              <ShareButtons prediction={prediction} />
+	            </div>
+	          </motion.div>
+	        )}
+	      </AnimatePresence>
+	    </motion.div>
+	  );
+	}
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
